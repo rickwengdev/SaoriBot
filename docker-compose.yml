@@ -1,0 +1,45 @@
+services:
+  backend:
+    image: backend
+    container_name: backend
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=db
+    depends_on:
+      - db
+    networks:
+      - shared-network
+
+  bot:
+    image: bot
+    container_name: bot
+    environment:
+      - DB_HOST=db
+    depends_on:
+      - db
+    networks:
+      - shared-network
+
+  db:
+    image: mongo
+    container_name: db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+    ports:
+      - "27017:27017"
+    networks:
+      - shared-network
+
+  webui:
+    image: webui
+    container_name: webui
+    ports:
+      - "8080:8080"
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    driver: bridge
