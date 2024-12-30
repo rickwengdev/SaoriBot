@@ -3,11 +3,10 @@ import { fileURLToPath } from 'node:url';
 import path, { dirname } from 'node:path';
 import { Client, Partials, Events, Collection, GatewayIntentBits } from 'discord.js';
 import dotenv from 'dotenv';
-import { MessageReactionHandler } from './datapackage/modfunction/messageReaction.js';
-import { GuildMembers } from './datapackage/modfunction/guildMember.js';
-import { dynamicvoicechannel } from './datapackage/modfunction/dynamicVoiceChannel.js';
-import { setupLogging } from './datapackage/modfunction/logservermessage.js';
-import mongoose from 'mongoose';
+import MessageReactionHandler from './features/moderation/messageReaction.js';
+import DynamicVoiceChannelManager from './features/moderation/dynamicVoiceChannel.js';
+import LoggingManager from './features/moderation/logservermessage.js';
+import GuildMembers from './features/welcome/guildMember.js';
 
 dotenv.config();
 
@@ -77,13 +76,6 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 });
 
-mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  }).then(() => console.log('已連接到 MongoDB')).catch(err => console.error('連接 MongoDB 失敗', err)
-);
-
-
 client.once(Events.ClientReady, c => {
     console.log(`✅Ready! Signed in as ${c.user.tag}`);
 
@@ -96,18 +88,16 @@ client.once(Events.ClientReady, c => {
 
 export function setup() {
     // 設置訊息反應事件
-    new MessageReactionHandler(client);
+    new MessageReactionHandler(client, 'https://localhost:3000');
 
     // 設置用戶加入伺服器事件
-    new GuildMembers(client);
+    new GuildMembers(client, 'https://localhost:3000');
 
     // 設置自動語音頻道功能
-    dynamicvoicechannel(client);
+    new DynamicVoiceChannelManager(client, 'https://localhost:3000');
 
     // 設置日誌功能
-    setupLogging(client);
-
-    // 其他需要初始化的功能...
+    new LoggingManager(client, 'https://localhost:3000');
 }
 
 // 登錄到 Discord

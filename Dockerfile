@@ -8,7 +8,5 @@ RUN npm install
 # 复制应用代码
 COPY . .
 
-EXPOSE 3001
-
 # 启动应用
 CMD [ "node", "main.js" ]

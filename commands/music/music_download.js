@@ -3,41 +3,55 @@ import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import ytdl from '@distube/ytdl-core';
 import path from 'path';
-import { errorhandler } from '../../datapackage/musicfunction/playerManager.js';
 
 const downloadPath = path.resolve('./downloads');
 
-// 檢查並創建下載文件夾
-try {
-    await fs.access(downloadPath);
-} catch (error) {
-    if (error.code === 'ENOENT') {
-        await fs.mkdir(downloadPath);
-    } else {
-        throw error;
+/**
+ * 初始化下載目錄
+ */
+async function initializeDownloadPath() {
+    try {
+        await fs.access(downloadPath);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            await fs.mkdir(downloadPath);
+        } else {
+            throw error;
+        }
     }
 }
 
+/**
+ * 下載 YouTube 音頻為 MP3
+ * @param {string} url - YouTube 視頻 URL
+ * @param {string} filename - 保存的文件名
+ * @returns {Promise<string>} - 文件路徑
+ */
 async function downloadMp3(url, filename) {
     const filePath = path.join(downloadPath, filename);
 
     return new Promise((resolve, reject) => {
-        const audio = ytdl(url, { filter: 'audioonly', quality: 'highestaudio' });
+        const audioStream = ytdl(url, { filter: 'audioonly', quality: 'highestaudio' });
 
-        audio.pipe(createWriteStream(filePath))
+        audioStream.pipe(createWriteStream(filePath))
             .on('finish', () => resolve(filePath))
             .on('error', reject);
     });
 }
 
+/**
+ * 處理下載並上傳 MP3 文件
+ * @param {import('discord.js').CommandInteraction} interaction - Discord 指令交互對象
+ */
 async function downloadAndUploadVideo(interaction) {
     try {
-        await interaction.deferReply();
+        await interaction.deferReply(); // 延遲回覆以處理時間
 
         const videoUrl = interaction.options.getString('url');
         const info = await ytdl.getBasicInfo(videoUrl);
+
         if (!info || !info.videoDetails) {
-            return interaction.editReply(`無法獲取影片信息: ${videoUrl}`);
+            return interaction.editReply(`Unable to retrieve video information: ${videoUrl}`);
         }
 
         const videoTitle = info.videoDetails.title.replace(/[^a-zA-Z0-9_\-]/g, '_');
@@ -49,21 +63,22 @@ async function downloadAndUploadVideo(interaction) {
         // 檢查文件大小
         const stats = await fs.stat(mp3Path);
         const fileSizeInMB = stats.size / (1024 * 1024);
-        if (fileSizeInMB > 8) {  // 8MB for standard users
-            return interaction.editReply(`文件過大（${fileSizeInMB.toFixed(2)} MB），超過了 Discord 的上傳限制。`);
+        if (fileSizeInMB > 8) {  // 8MB 的 Discord 上傳限制
+            await fs.unlink(mp3Path); // 刪除文件
+            return interaction.editReply(`File too large (${fileSizeInMB.toFixed(2)} MB), exceeds Discord upload limit.`);
         }
 
         // 創建嵌入消息
         const embed = new EmbedBuilder()
-            .setColor('#FF0000')  // YouTube 紅色
+            .setColor('#FF0000') // YouTube 紅色
             .setTitle(info.videoDetails.title)
-            .setURL(info.videoDetails.video_url) // 添加視頻 URL
-            .setDescription(`**作者**: ${info.videoDetails.author.name}\n**時長**: ${formatDuration(info.videoDetails.lengthSeconds)}`)
+            .setURL(info.videoDetails.video_url)
+            .setDescription(`**Author**: ${info.videoDetails.author.name}\n**Duration**: ${formatDuration(info.videoDetails.lengthSeconds)}`)
             .setThumbnail(info.videoDetails.thumbnails[0].url)
-            .setFooter({ text: '感謝使用我們的音樂機器人!' });
+            .setFooter({ text: 'Thank you for using our music bot!' });
 
         // 下載完成，發送嵌入消息並上傳文件
-        await interaction.editReply({ 
+        await interaction.editReply({
             embeds: [embed],
             files: [mp3Path]
         });
@@ -71,26 +86,33 @@ async function downloadAndUploadVideo(interaction) {
         // 清理下載的文件
         await fs.unlink(mp3Path);
     } catch (error) {
-        errorhandler(error);
-        interaction.editReply('下載或上傳影片時發生錯誤。');
+        console.error(`Error in downloadAndUploadVideo: ${error.message}`);
+        await interaction.editReply('❌ An error occurred while downloading or uploading the video, please try again later.');
     }
 }
 
-// 幫助函數：格式化時長
+/**
+ * 幫助函數：格式化時長
+ * @param {number} seconds - 時間（秒）
+ * @returns {string} - 格式化的時間
+ */
 function formatDuration(seconds) {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${minutes} 分 ${secs} 秒`;
+    return `${minutes} min ${secs} sec`;
 }
 
+// 初始化 Slash Command
 export const data = new SlashCommandBuilder()
     .setName('download_video')
-    .setDescription('下載 YouTube 影片的 MP3 音頻')
+    .setDescription('Download MP3 audio from a YouTube video')
     .addStringOption(option =>
         option.setName('url')
-            .setDescription('YouTube 影片的 URL')
+            .setDescription('URL of the YouTube video')
             .setRequired(true));
 
+// Slash Command 的執行函數
 export async function execute(interaction) {
+    await initializeDownloadPath(); // 確保下載目錄存在
     await downloadAndUploadVideo(interaction);
 }

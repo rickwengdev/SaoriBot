@@ -1,57 +1,79 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import { getMusicPlayer, errorhandler } from '../../datapackage/musicfunction/playerManager.js';
+import MusicPlayer from '../../features/music/musicPlayer.js';
 import axios from 'axios';
 import cheerio from 'cheerio';
 import ytdl from '@distube/ytdl-core';
 
-// 檢查是否為有效的 YouTube 鏈接
-async function is_valid_youtube_url(url) {
+/**
+ * 檢查是否為有效的 YouTube 鏈接
+ * @param {string} url - 待檢查的 URL
+ * @returns {Promise<boolean>} - 是否為有效的 YouTube 鏈接
+ */
+async function isValidYoutubeUrl(url) {
     try {
         const response = await axios.get(url);
         const $ = cheerio.load(response.data);
-        // 如果頁面標題不是 "YouTube"，則視為有效的 YouTube 鏈接
-        return $('title').text() !== 'YouTube';
+        return $('title').text() !== 'YouTube'; // 如果標題不是 "YouTube"，則認為是有效鏈接
     } catch (error) {
-        console.error(`Check youtube url error：${error}`);
+        console.error(`Error validating YouTube URL: ${error.message}`);
         return false;
     }
 }
 
-// 添加歌曲到播放列表
+/**
+ * 獲取 YouTube 視頻的基本信息
+ * @param {string} url - YouTube 視頻 URL
+ * @returns {Promise<Object>} - 視頻基本信息
+ */
+async function getVideoInfo(url) {
+    try {
+        const info = await ytdl.getBasicInfo(url);
+        if (!info || !info.videoDetails) {
+            throw new Error('Failed to retrieve video information.');
+        }
+        return info.videoDetails;
+    } catch (error) {
+        console.error(`Error fetching video info: ${error.message}`);
+        throw error;
+    }
+}
+
+/**
+ * 添加歌曲到播放列表
+ * @param {import('discord.js').CommandInteraction} interaction - Discord 指令交互對象
+ */
 async function addToPlaylist(interaction) {
     try {
-        interaction.deferReply();
+        await interaction.deferReply(); // 確保交互回覆被延遲處理
 
         const songUrl = interaction.options.getString('url');
+        const guildId = interaction.guild.id;
 
-        // 檢查是否為有效的 YouTube 鏈接
-        const isValid = await is_valid_youtube_url(songUrl);
-        if (!isValid) {
-            return interaction.editReply(`The provided URL ${songUrl} does not appear to be a valid YouTube video.`);
+        // 驗證 URL 是否有效
+        if (!await isValidYoutubeUrl(songUrl)) {
+            await interaction.editReply(`The provided URL "${songUrl}" is not a valid YouTube video.`);
+            return;
         }
 
-        // 獲取伺服器播放器實例
-        const guildId = interaction.guild.id;
-        const player = getMusicPlayer(guildId);
-
-        // 将歌曲添加到播放列表
+        // 獲取伺服器專屬播放器並添加歌曲
+        const player = new MusicPlayer(guildId); // 動態生成播放器以支援多伺服器
         player.addSong(songUrl);
 
-        const info = await ytdl.getBasicInfo(songUrl);
+        // 獲取視頻詳細信息
+        const videoDetails = await getVideoInfo(songUrl);
 
-        // 檢查是否成功獲取視頻信息
-        if (!info || !info.videoDetails) {
-            return interaction.editReply(`Unable to get video information for the provided URL ${songUrl}.`);
-        }
-
+        // 構建嵌入消息
         const embed = new EmbedBuilder()
-            .setColor('#FF0000')  // YouTube 紅色
-            .setTitle(info.videoDetails.title)
-            .setThumbnail(info.videoDetails.thumbnails[0].url);
+            .setColor('#FF0000') // YouTube 紅色
+            .setTitle(videoDetails.title)
+            .setURL(songUrl)
+            .setThumbnail(videoDetails.thumbnails[0]?.url || '') // 防止縮略圖為空
+            .setDescription(videoDetails.description.slice(0, 200) + '...'); // 限制描述長度
 
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ content: '✅ Song added to the playlist!', embeds: [embed] });
     } catch (error) {
-        errorhandler(error);
+        console.error(`Error adding song to playlist: ${error.message}`);
+        await interaction.editReply('❌ An error occurred while adding the song to the playlist.');
     }
 }
 
