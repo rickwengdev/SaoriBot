@@ -88,16 +88,16 @@ client.once(Events.ClientReady, c => {
 
 export function setup() {
     // 設置訊息反應事件
-    new MessageReactionHandler(client, 'https://localhost:3000');
+    new MessageReactionHandler(client, process.env.apiEndpoint);
 
     // 設置用戶加入伺服器事件
-    new GuildMembers(client, 'https://localhost:3000');
+    new GuildMembers(client, process.env.apiEndpoint);
 
     // 設置自動語音頻道功能
-    new DynamicVoiceChannelManager(client, 'https://localhost:3000');
+    new DynamicVoiceChannelManager(client, process.env.apiEndpoint);
 
     // 設置日誌功能
-    new LoggingManager(client, 'https://localhost:3000');
+    new LoggingManager(client, process.env.apiEndpoint);
 }
 
 // 登錄到 Discord
