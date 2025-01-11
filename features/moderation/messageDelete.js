@@ -1,3 +1,5 @@
+import Logger from '../../features/errorhandle/errorhandle.js'; // 假設 Logger 位於此位置
+
 /**
  * @class MessageDeleter
  * @description 提供刪除 Discord 頻道消息的功能，包括分批刪除。
@@ -13,6 +15,7 @@ class MessageDeleter {
         }
         this.interaction = interaction;
         this.channel = interaction.channel;
+        this.logger = new Logger();
     }
 
     /**
@@ -24,7 +27,7 @@ class MessageDeleter {
      */
     async deleteMessages(numberOfMessages = 1, isLargeTimeRange = false) {
         if (isLargeTimeRange || numberOfMessages > 100) {
-            console.log('🔄 Performing multiple batch deletes...');
+            this.logger.info('🔄 Performing multiple batch deletes...');
             return this.bulkDeleteMessages(numberOfMessages);
         }
         return this.simpleDelete(numberOfMessages);
@@ -39,10 +42,10 @@ class MessageDeleter {
     async simpleDelete(numberOfMessages) {
         try {
             const deletedMessages = await this.channel.bulkDelete(numberOfMessages, true); // Discord API 限制最多 14 天內消息
-            console.log(`✅ Successfully deleted ${deletedMessages.size} messages.`);
+            this.logger.info(`✅ Successfully deleted ${deletedMessages.size} messages.`);
             return deletedMessages.size;
         } catch (error) {
-            console.error('❌ Error in simple delete:', error.message);
+            this.logger.error('❌ Error in simple delete:', error);
             return 0;
         }
     }
@@ -63,19 +66,19 @@ class MessageDeleter {
                 const messagesToDelete = Math.min(remainingMessages, batchSize);
                 const fetchedMessages = await this.channel.messages.fetch({ limit: messagesToDelete });
 
-                console.log(`🗑️ Deleting ${fetchedMessages.size} messages in batch...`);
+                this.logger.info(`🗑️ Deleting ${fetchedMessages.size} messages in batch...`);
                 await Promise.allSettled(fetchedMessages.map(message => message.delete()));
 
                 remainingMessages -= fetchedMessages.size;
 
                 if (remainingMessages > 0) {
-                    console.log(`⏳ Waiting for ${delayBetweenBatches}ms before next batch...`);
+                    this.logger.info(`⏳ Waiting for ${delayBetweenBatches}ms before next batch...`);
                     await this.delay(delayBetweenBatches);
                 }
             }
             return numberOfMessages;
         } catch (error) {
-            console.error('❌ Error during batch deletion:', error.message);
+            this.logger.error('❌ Error during batch deletion:', error);
             return numberOfMessages - remainingMessages;
         }
     }
@@ -86,7 +89,11 @@ class MessageDeleter {
      * @returns {boolean} 是否應中止交互。
      */
     shouldAbort() {
-        return this.interaction.deferred || this.interaction.replied || !this.interaction.isCommand();
+        const shouldAbort = this.interaction.deferred || this.interaction.replied || !this.interaction.isCommand();
+        if (shouldAbort) {
+            this.logger.warn('❌ Interaction aborted:', this.interaction);
+        }
+        return shouldAbort;
     }
 
     /**
@@ -97,18 +104,18 @@ class MessageDeleter {
      * @returns {Promise<void>}
      */
     async handleInteraction(numberOfMessages = 1, isLargeTimeRange = false) {
-        if (this.shouldAbort()) {
-            console.error('❌ Interaction aborted:', this.interaction);
-            return;
-        }
+        if (this.shouldAbort()) return;
 
         try {
             await this.interaction.deferReply({ ephemeral: true });
-            const deletedCount = await this.deleteMessages(numberOfMessages, isLargeTimeRange);
+            this.logger.info(`Starting to delete ${numberOfMessages} messages (Large time range: ${isLargeTimeRange})`);
 
+            const deletedCount = await this.deleteMessages(numberOfMessages, isLargeTimeRange);
             const replyMessage = deletedCount > 0
                 ? `✅ Successfully deleted ${deletedCount} messages.`
                 : '⚠️ No messages were deleted.';
+
+            this.logger.info(replyMessage);
             await this.interaction.editReply({ content: replyMessage, ephemeral: true });
         } catch (error) {
             this.handleErrorResponse('❌ Failed to delete messages.', error);
@@ -122,11 +129,11 @@ class MessageDeleter {
      * @param {Error} error - 錯誤對象。
      */
     async handleErrorResponse(errorMessage, error) {
-        console.error(errorMessage, error);
+        this.logger.error(errorMessage, error);
         try {
             await this.interaction.editReply({ content: errorMessage, ephemeral: true });
         } catch (replyError) {
-            console.error('❌ Error replying to interaction:', replyError.message);
+            this.logger.error('❌ Error replying to interaction:', replyError);
         }
     }
 

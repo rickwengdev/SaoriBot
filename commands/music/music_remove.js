@@ -1,6 +1,10 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import MusicPlayer from '../../features/music/musicPlayer.js';
 import ytdl from '@distube/ytdl-core';
+import Logger from '../../features/errorhandle/errorhandle.js';
+
+// 初始化 Logger
+const logger = new Logger();
 
 // 定義 Slash Command 的結構
 export const data = new SlashCommandBuilder()
@@ -16,29 +20,38 @@ export async function execute(interaction) {
     try {
         await interaction.deferReply(); // 延遲回覆，防止超時
 
-        // 獲取伺服器 ID 和播放器實例
         const guildId = interaction.guild.id;
+        const userTag = interaction.user.tag;
+
+        logger.info(`Command /music_remove triggered by ${userTag} in guild ${guildId}`);
+
+        // 獲取伺服器 ID 和播放器實例
         const player = new MusicPlayer(guildId);
 
         // 獲取指定的歌曲 URL
         const songUrl = interaction.options.getString('url');
 
+        logger.info(`Attempting to remove song with URL: ${songUrl} from the playlist in guild ${guildId}`);
+
         // 獲取播放列表並檢查是否包含該歌曲
         const playlist = player.getPlaylist();
         if (!playlist.includes(songUrl)) {
+            logger.warn(`Song URL (${songUrl}) not found in the playlist for guild ${guildId}`);
             return interaction.editReply(`❌ The song URL (${songUrl}) is not in the playlist.`);
         }
 
-        // 使用 removeCurrentSong 函數刪除當前歌曲或指定歌曲
+        // 使用 removeSong 函數刪除指定歌曲
         player.removeSong(songUrl);
+        logger.info(`Successfully removed song URL (${songUrl}) from the playlist in guild ${guildId}`);
 
         // 獲取歌曲詳細信息
         let videoDetails;
         try {
             const info = await ytdl.getBasicInfo(songUrl);
             videoDetails = info?.videoDetails;
+            logger.info(`Fetched video details for URL (${songUrl}): Title - ${videoDetails?.title}`);
         } catch (error) {
-            console.warn(`Unable to fetch song details: ${error.message}`);
+            logger.warn(`Unable to fetch song details for URL (${songUrl}): ${error.message}`);
         }
 
         // 回覆刪除成功的訊息
@@ -53,7 +66,7 @@ export async function execute(interaction) {
             await interaction.editReply(`🎵 The song has been successfully removed from the playlist: ${songUrl}`);
         }
     } catch (error) {
-        console.error(`Error in /music_remove command: ${error.message}`);
+        logger.error(`Error in /music_remove command in guild ${interaction.guild.id}: ${error.message}`);
         await interaction.editReply('❌ Unable to remove the song, please try again later.');
     }
 }

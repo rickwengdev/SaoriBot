@@ -3,6 +3,10 @@ import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import ytdl from '@distube/ytdl-core';
 import path from 'path';
+import Logger from '../../features/errorhandle/errorhandle.js';
+
+// 初始化 Logger
+const logger = new Logger();
 
 const downloadPath = path.resolve('./downloads');
 
@@ -12,10 +16,13 @@ const downloadPath = path.resolve('./downloads');
 async function initializeDownloadPath() {
     try {
         await fs.access(downloadPath);
+        logger.info(`Download path exists: ${downloadPath}`);
     } catch (error) {
         if (error.code === 'ENOENT') {
             await fs.mkdir(downloadPath);
+            logger.info(`Created download path: ${downloadPath}`);
         } else {
+            logger.error(`Error initializing download path: ${error.message}`);
             throw error;
         }
     }
@@ -30,12 +37,19 @@ async function initializeDownloadPath() {
 async function downloadMp3(url, filename) {
     const filePath = path.join(downloadPath, filename);
 
+    logger.info(`Starting download for URL: ${url}`);
     return new Promise((resolve, reject) => {
         const audioStream = ytdl(url, { filter: 'audioonly', quality: 'highestaudio' });
 
         audioStream.pipe(createWriteStream(filePath))
-            .on('finish', () => resolve(filePath))
-            .on('error', reject);
+            .on('finish', () => {
+                logger.info(`Downloaded MP3 file: ${filePath}`);
+                resolve(filePath);
+            })
+            .on('error', (error) => {
+                logger.error(`Error during MP3 download: ${error.message}`);
+                reject(error);
+            });
     });
 }
 
@@ -48,9 +62,11 @@ async function downloadAndUploadVideo(interaction) {
         await interaction.deferReply(); // 延遲回覆以處理時間
 
         const videoUrl = interaction.options.getString('url');
-        const info = await ytdl.getBasicInfo(videoUrl);
+        logger.info(`Command /download_video triggered by ${interaction.user.tag} with URL: ${videoUrl}`);
 
+        const info = await ytdl.getBasicInfo(videoUrl);
         if (!info || !info.videoDetails) {
+            logger.warn(`Unable to retrieve video info for URL: ${videoUrl}`);
             return interaction.editReply(`Unable to retrieve video information: ${videoUrl}`);
         }
 
@@ -63,8 +79,9 @@ async function downloadAndUploadVideo(interaction) {
         // 檢查文件大小
         const stats = await fs.stat(mp3Path);
         const fileSizeInMB = stats.size / (1024 * 1024);
-        if (fileSizeInMB > 8) {  // 8MB 的 Discord 上傳限制
-            await fs.unlink(mp3Path); // 刪除文件
+        if (fileSizeInMB > 8) { // 8MB 的 Discord 上傳限制
+            logger.warn(`File too large (${fileSizeInMB.toFixed(2)} MB), deleting: ${mp3Path}`);
+            await fs.unlink(mp3Path);
             return interaction.editReply(`File too large (${fileSizeInMB.toFixed(2)} MB), exceeds Discord upload limit.`);
         }
 
@@ -80,13 +97,16 @@ async function downloadAndUploadVideo(interaction) {
         // 下載完成，發送嵌入消息並上傳文件
         await interaction.editReply({
             embeds: [embed],
-            files: [mp3Path]
+            files: [mp3Path],
         });
+
+        logger.info(`Successfully uploaded MP3 for video: ${info.videoDetails.title}`);
 
         // 清理下載的文件
         await fs.unlink(mp3Path);
+        logger.info(`Deleted temporary file: ${mp3Path}`);
     } catch (error) {
-        console.error(`Error in downloadAndUploadVideo: ${error.message}`);
+        logger.error(`Error in downloadAndUploadVideo: ${error.message}`);
         await interaction.editReply('❌ An error occurred while downloading or uploading the video, please try again later.');
     }
 }

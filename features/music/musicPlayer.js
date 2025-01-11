@@ -9,6 +9,7 @@ import { EmbedBuilder } from 'discord.js';
 import ytdl from '@distube/ytdl-core';
 import { savePlaylists, playlists } from './playlistManager.js';
 import { errorhandler } from './errorHandler.js';
+import Logger from '../../features/errorhandle/errorhandle.js'; // 假設 Logger 位於此位置
 
 /**
  * @class MusicPlayer
@@ -20,81 +21,75 @@ class MusicPlayer {
      * @param {string} guildId - Discord 伺服器的唯一 ID。
      */
     constructor(guildId) {
-        /** @type {string} */
         this.guildId = guildId;
-
-        /** @type {import('@discordjs/voice').AudioPlayer} */
         this.player = createAudioPlayer();
-
-        /** @type {string|null} */
         this.songUrl = null;
+        this.logger = new Logger();
 
         this.initPlaylist();
+        this.logger.info(`MusicPlayer initialized for guild: ${guildId}`);
     }
 
     /**
-     * 初始化播放列表。如果該伺服器的播放列表不存在，則創建一個新的。
+     * 初始化播放列表。
      */
     initPlaylist() {
         if (!playlists.has(this.guildId)) {
             playlists.set(this.guildId, []);
+            this.logger.info(`New playlist created for guild: ${this.guildId}`);
         }
     }
 
     /**
-     * 將歌曲添加到播放列表中。
-     * @param {string} songUrl - 要添加的歌曲 URL。
+     * 添加歌曲到播放列表。
      */
     addSong(songUrl) {
         const playlist = playlists.get(this.guildId) || [];
         playlist.push(songUrl);
         playlists.set(this.guildId, playlist);
         savePlaylists();
+        this.logger.info(`Song added to playlist for guild: ${this.guildId}, URL: ${songUrl}`);
     }
 
     /**
-     * 獲取當前播放列表。
-     * @returns {string[]} 當前播放列表中的歌曲 URL 數組。
+     * 獲取播放列表。
      */
     getPlaylist() {
         return playlists.get(this.guildId) || [];
     }
 
     /**
-     * 移除當前正在播放的歌曲。
+     * 移除當前歌曲。
      */
     removeCurrentSong() {
         if (this.songUrl) {
             const playlist = playlists.get(this.guildId) || [];
             playlists.set(this.guildId, playlist.filter(url => url !== this.songUrl));
             savePlaylists();
+            this.logger.info(`Removed current song from playlist for guild: ${this.guildId}`);
         }
     }
 
     /**
      * 創建音頻資源。
-     * @param {string} songUrl - 歌曲 URL。
-     * @returns {Promise<import('@discordjs/voice').AudioResource>} 返回創建的音頻資源。
-     * @throws {Error} 如果音頻資源創建失敗，將拋出異常。
      */
     async createAudioResource(songUrl) {
         try {
             const stream = ytdl(songUrl, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
             const { stream: probeStream, type } = await demuxProbe(stream);
+            this.logger.info(`Audio resource created for song: ${songUrl}`);
             return createAudioResource(probeStream, { inputType: type });
         } catch (error) {
-            console.error('Error creating audio resource:', error.message);
+            this.logger.error(`Error creating audio resource for song: ${songUrl}`, error);
             throw error;
         }
     }
 
     /**
-     * 播放播放列表中的當前歌曲。
-     * @param {import('discord.js').CommandInteraction} interaction - Discord 的交互對象。
+     * 播放歌曲。
      */
     async playSong(interaction) {
         const voiceChannelId = interaction.member?.voice.channelId;
-
         if (!voiceChannelId) {
             await interaction.editReply('❌ Please join a voice channel first!');
             return;
@@ -115,6 +110,7 @@ class MusicPlayer {
                 .setColor('#FF0000');
 
             await interaction.editReply({ content: '🎵 Now playing:', embeds: [embed] });
+            this.logger.info(`Playing song in guild: ${this.guildId}, URL: ${this.songUrl}`);
 
             let connection = getVoiceConnection(interaction.guild.id);
             if (!connection) {
@@ -124,6 +120,7 @@ class MusicPlayer {
                     adapterCreator: interaction.guild.voiceAdapterCreator,
                 });
                 connection.subscribe(this.player);
+                this.logger.info(`Voice connection established for guild: ${this.guildId}`);
             }
 
             const resource = await this.createAudioResource(this.songUrl);
@@ -131,13 +128,13 @@ class MusicPlayer {
 
             this.player.once('idle', () => this.handleNextSong(interaction));
         } catch (error) {
+            this.logger.error(`Error playing song in guild: ${this.guildId}`, error);
             errorhandler(error, interaction, '❌ Unable to play the song, please try again later.');
         }
     }
 
     /**
-     * 播放下一首歌曲。如果播放列表為空，則停止播放並斷開連接。
-     * @param {import('discord.js').CommandInteraction} interaction - Discord 的交互對象。
+     * 播放下一首歌曲。
      */
     async handleNextSong(interaction) {
         this.removeCurrentSong();
@@ -149,13 +146,12 @@ class MusicPlayer {
             const connection = getVoiceConnection(interaction.guild.id);
             if (connection) connection.destroy();
 
-            console.log(`Music playback stopped for guild: ${this.guildId}`);
+            this.logger.info(`Music playback stopped for guild: ${this.guildId}`);
         }
     }
 
     /**
-     * 跳過當前歌曲並播放下一首。
-     * @param {import('discord.js').CommandInteraction} interaction - Discord 的交互對象。
+     * 跳過當前歌曲。
      */
     async skipToNextSong(interaction) {
         try {
@@ -164,6 +160,7 @@ class MusicPlayer {
             const playlist = this.getPlaylist();
             if (playlist.length <= 1) {
                 await interaction.editReply('❌ There are no more songs in the playlist to skip.');
+                this.logger.warn(`Skip attempted but no more songs in playlist for guild: ${this.guildId}`);
                 return;
             }
 
@@ -172,15 +169,15 @@ class MusicPlayer {
             await this.playSong(interaction);
 
             await interaction.editReply('✅ Skipped to the next song!');
+            this.logger.info(`Skipped to the next song in guild: ${this.guildId}`);
         } catch (error) {
-            console.error('Error skipping to the next song:', error.message);
+            this.logger.error(`Error skipping to the next song in guild: ${this.guildId}`, error);
             await interaction.editReply('❌ Unable to skip to the next song, please try again later.');
         }
     }
 
     /**
-     * 停止播放當前歌曲並清空播放列表。
-     * @param {import('discord.js').CommandInteraction} interaction - Discord 的交互對象。
+     * 停止播放。
      */
     stop(interaction) {
         this.player.stop();
@@ -189,7 +186,7 @@ class MusicPlayer {
         const connection = getVoiceConnection(interaction.guild.id);
         if (connection) connection.destroy();
 
-        console.log(`Music playback stopped for guild: ${this.guildId}`);
+        this.logger.info(`Music playback stopped and connection destroyed for guild: ${this.guildId}`);
     }
 }
 

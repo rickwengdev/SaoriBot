@@ -1,4 +1,8 @@
-import { SlashCommandBuilder } from 'discord.js'
+import { SlashCommandBuilder } from 'discord.js';
+import Logger from '../../features/errorhandle/errorhandle.js';
+
+// 初始化 Logger
+const logger = new Logger();
 
 export const data = new SlashCommandBuilder()
   .setName('bot_anonymousmessage')
@@ -9,34 +13,43 @@ export const data = new SlashCommandBuilder()
     .setRequired(true))
   .addStringOption(option => 
     option.setName('messageid')
-    .setDescription('Message id to reply to'))
+    .setDescription('Message id to reply to'));
 
 export async function execute(interaction) {
   const message = interaction.options.getString('message');
   const messageId = interaction.options.getString('messageid');
-  
+  const userTag = interaction.user.tag;
+  const guildId = interaction.guild?.id;
+
   try {
+    logger.info(`Command /bot_anonymousmessage triggered by ${userTag} in guild ${guildId || 'DM'} with message: "${message}"`);
+
     if (messageId) {
-    await interaction.reply({
-      content: `Anonymous message sent: "${message}", reply to: ${messageId}`,
-      ephemeral: true,
-    });
-    await interaction.channel.send({
-      content: message,
-      reply: { messageReference: messageId },
-    });
+      logger.info(`Anonymous message is a reply to message ID: ${messageId}`);
+      // 發送回覆訊息
+      await interaction.reply({
+        content: `Anonymous message sent: "${message}", reply to: ${messageId}`,
+        ephemeral: true,
+      });
+      await interaction.channel.send({
+        content: message,
+        reply: { messageReference: messageId },
+      });
+      logger.info(`Anonymous reply sent successfully in guild ${guildId || 'DM'}`);
     } else {
-    await interaction.reply({
-      content: `Anonymous message sent: "${message}"`,
-      ephemeral: true,
-    });
-    await interaction.channel.send(message);
+      // 發送普通匿名訊息
+      await interaction.reply({
+        content: `Anonymous message sent: "${message}"`,
+        ephemeral: true,
+      });
+      await interaction.channel.send(message);
+      logger.info(`Anonymous message sent successfully in guild ${guildId || 'DM'}`);
     }
   } catch (error) {
-    console.error('Failed to send anonymous message:', error);
+    logger.error(`Failed to send anonymous message in guild ${guildId || 'DM'}: ${error.message}`);
     await interaction.reply({
-    content: 'Failed to send anonymous message. Please try again later.',
-    ephemeral: true,
+      content: 'Failed to send anonymous message. Please try again later.',
+      ephemeral: true,
     });
   }
-  }
+}

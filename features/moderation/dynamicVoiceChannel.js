@@ -1,6 +1,7 @@
 import { PermissionsBitField } from 'discord.js';
 import axios from 'axios';
 import https from 'https';
+import Logger from '../../features/errorhandle/errorhandle.js'; // 假設 Logger 位於此位置
 
 /**
  * @class DynamicVoiceChannelManager
@@ -15,6 +16,7 @@ class DynamicVoiceChannelManager {
     constructor(client, apiEndpoint) {
         this.client = client;
         this.apiEndpoint = apiEndpoint;
+        this.logger = new Logger();
 
         this.init();
     }
@@ -40,12 +42,13 @@ class DynamicVoiceChannelManager {
             // 獲取觸發頻道 ID
             const triggerChannelId = await this.getTriggerChannelId(guildId);
             if (!triggerChannelId) {
-                console.warn(`Guild ${guildId} does not have a configured trigger channel ID`);
+                this.logger.warn(`Guild ${guildId} does not have a configured trigger channel ID.`);
                 return;
             }
 
             // 使用者加入觸發頻道
             if (newState.channelId === triggerChannelId) {
+                this.logger.info(`User joined trigger channel ${triggerChannelId} in guild ${guildId}.`);
                 await this.createDynamicChannel(newState);
             }
 
@@ -54,7 +57,7 @@ class DynamicVoiceChannelManager {
                 await this.deleteEmptyChannel(oldState.channel);
             }
         } catch (error) {
-            console.error('Error handling voice state update:', error.message);
+            this.logger.error('Error handling voice state update:', error);
         }
     }
 
@@ -65,10 +68,13 @@ class DynamicVoiceChannelManager {
      */
     async getTriggerChannelId(guildId) {
         try {
-            const response = await axios.get(`${this.apiEndpoint}/api/${guildId}/dynamic-voice-channels`, {httpsAgent: new https.Agent({rejectUnauthorized: false})});
+            const response = await axios.get(`${this.apiEndpoint}/api/${guildId}/dynamic-voice-channels`, {
+                httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+            });
+            this.logger.info(`Fetched trigger channel ID for guild ${guildId}: ${response.data?.config.base_channel_id || 'None'}`);
             return response.data?.config.base_channel_id || null;
         } catch (error) {
-            console.error(`Error fetching triggerChannelId for guild ${guildId}:`, error.message);
+            this.logger.error(`Error fetching triggerChannelId for guild ${guildId}:`, error);
             return null;
         }
     }
@@ -97,7 +103,7 @@ class DynamicVoiceChannelManager {
                             PermissionsBitField.Flags.ManageChannels,
                             PermissionsBitField.Flags.MoveMembers,
                             PermissionsBitField.Flags.MuteMembers,
-                            PermissionsBitField.Flags.DeafenMembers
+                            PermissionsBitField.Flags.DeafenMembers,
                         ],
                     },
                 ],
@@ -105,9 +111,9 @@ class DynamicVoiceChannelManager {
 
             // 將使用者移動到新頻道
             await member.voice.setChannel(channel);
-            console.log(`Created and moved member to channel: ${channel.id}`);
+            this.logger.info(`Created and moved user ${member.user.tag} to channel ${channel.id} in guild ${state.guild.id}.`);
         } catch (error) {
-            console.error('Failed to create dynamic channel:', error.message);
+            this.logger.error('Failed to create dynamic channel:', error);
         }
     }
 
@@ -120,10 +126,10 @@ class DynamicVoiceChannelManager {
             // 檢查頻道是否為空且為動態創建的頻道
             if (channel.members.size === 0 && channel.name.includes("'s Channel")) {
                 await channel.delete();
-                console.log(`Deleted empty channel: ${channel.id}`);
+                this.logger.info(`Deleted empty dynamic channel ${channel.id} in guild ${channel.guild.id}.`);
             }
         } catch (error) {
-            console.error('Failed to delete empty channel:', error.message);
+            this.logger.error('Failed to delete empty channel:', error);
         }
     }
 }

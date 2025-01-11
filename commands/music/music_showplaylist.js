@@ -1,6 +1,10 @@
 import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
 import MusicPlayer from '../../features/music/musicPlayer.js';
 import ytdl from '@distube/ytdl-core';
+import Logger from '../../features/errorhandle/errorhandle.js';
+
+// 初始化 Logger
+const logger = new Logger();
 
 /**
  * 顯示當前播放列表
@@ -9,11 +13,16 @@ import ytdl from '@distube/ytdl-core';
 async function viewPlaylist(interaction) {
     try {
         const guildId = interaction.guild.id;
+        const userTag = interaction.user.tag;
+
+        logger.info(`Command /music_showplaylist triggered by ${userTag} in guild ${guildId}`);
+
         const player = new MusicPlayer(guildId);
         const playlist = player.getPlaylist();
 
         // 檢查播放列表是否為空
         if (playlist.length === 0) {
+            logger.info(`Playlist is empty for guild ${guildId}`);
             return interaction.reply('🎵 The playlist is currently empty!');
         }
 
@@ -31,6 +40,8 @@ async function viewPlaylist(interaction) {
             try {
                 const info = await ytdl.getBasicInfo(songUrl);
                 const title = info.videoDetails.title;
+
+                logger.info(`Fetched info for song ${index + 1}: ${title}`);
 
                 // 添加歌曲信息到字段
                 fields.push({
@@ -51,10 +62,11 @@ async function viewPlaylist(interaction) {
                         value: 'The playlist is too long, only the first 25 songs are displayed.',
                         inline: false
                     });
+                    logger.warn(`Playlist for guild ${guildId} exceeds 25 songs. Display truncated.`);
                     break;
                 }
             } catch (error) {
-                console.error(`Error fetching song info: ${error.message}`);
+                logger.error(`Error fetching song info for URL: ${songUrl}`, error);
                 fields.push({
                     name: '⚠️ Error',
                     value: 'Unable to fetch song information.',
@@ -67,9 +79,10 @@ async function viewPlaylist(interaction) {
         embed.addFields(fields);
 
         // 回覆播放列表
+        logger.info(`Successfully generated playlist embed for guild ${guildId}`);
         await interaction.reply({ embeds: [embed] });
     } catch (error) {
-        console.error(`Error in viewPlaylist: ${error.message}`);
+        logger.error(`Error in viewPlaylist for guild ${interaction.guild.id}: ${error.message}`);
         await interaction.reply('❌ Unable to display the playlist, please try again later.');
     }
 }

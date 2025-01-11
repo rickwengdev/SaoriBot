@@ -1,5 +1,6 @@
 import axios from 'axios';
 import https from 'https';
+import Logger from '../../features/errorhandle/errorhandle.js'; // 假設 Logger 位於此位置
 
 /**
  * @class MessageReactionHandler
@@ -14,6 +15,7 @@ class MessageReactionHandler {
     constructor(client, apiEndpoint) {
         this.client = client;
         this.apiEndpoint = apiEndpoint;
+        this.logger = new Logger();
 
         // 初始化事件處理
         this.client.on('messageReactionAdd', this.handleReactionAdd.bind(this));
@@ -22,66 +24,67 @@ class MessageReactionHandler {
 
     /**
      * 處理添加反應的事件。
-     * @param {import('discord.js').MessageReaction} reaction - 消息反應對象。
-     * @param {import('discord.js').User} user - 使用者對象。
      */
     async handleReactionAdd(reaction, user) {
         if (user.bot || !reaction.message.guild) return;
+
+        this.logger.info(`Handling reaction add by ${user.tag} in guild ${reaction.message.guild.id}`);
 
         try {
             const { role, member } = await this.getRoleAndMember(reaction, user);
             if (member && role) {
                 await member.roles.add(role);
+                this.logger.info(`Added role ${role.name} to ${user.tag} in guild ${reaction.message.guild.id}`);
+            } else {
+                this.logger.warn(`No matching role or member found for reaction add in guild ${reaction.message.guild.id}`);
             }
         } catch (error) {
-            console.error('Error handling reaction add:', error.message);
+            this.logger.error(`Error handling reaction add in guild ${reaction.message.guild.id}:`, error);
         }
     }
 
     /**
      * 處理移除反應的事件。
-     * @param {import('discord.js').MessageReaction} reaction - 消息反應對象。
-     * @param {import('discord.js').User} user - 使用者對象。
      */
     async handleReactionRemove(reaction, user) {
         if (user.bot || !reaction.message.guild) return;
+
+        this.logger.info(`Handling reaction remove by ${user.tag} in guild ${reaction.message.guild.id}`);
 
         try {
             const { role, member } = await this.getRoleAndMember(reaction, user);
             if (member && role) {
                 await member.roles.remove(role);
+                this.logger.info(`Removed role ${role.name} from ${user.tag} in guild ${reaction.message.guild.id}`);
+            } else {
+                this.logger.warn(`No matching role or member found for reaction remove in guild ${reaction.message.guild.id}`);
             }
         } catch (error) {
-            console.error('Error handling reaction remove:', error.message);
+            this.logger.error(`Error handling reaction remove in guild ${reaction.message.guild.id}:`, error);
         }
     }
 
     /**
      * 獲取對應的角色和成員。
-     * @param {import('discord.js').MessageReaction} reaction - 消息反應對象。
-     * @param {import('discord.js').User} user - 使用者對象。
-     * @returns {Promise<{role: import('discord.js').Role|null, member: import('discord.js').GuildMember|null}>}
      */
     async getRoleAndMember(reaction, user) {
         const guildId = reaction.message.guild.id;
         const messageId = reaction.message.id;
         const emojiKey = reaction.emoji.id || reaction.emoji.name;
-    
+
+        this.logger.info(`Fetching role and member for message ID ${messageId} and emoji ${emojiKey} in guild ${guildId}`);
+
         try {
-            // 從 API 獲取反應角色配置
             const response = await axios.get(`${this.apiEndpoint}/api/${guildId}/reaction-roles`, {
-                httpsAgent: new https.Agent({ rejectUnauthorized: false }) // 忽略自簽名證書
+                httpsAgent: new https.Agent({ rejectUnauthorized: false }),
             });
-    
-            // 檢查 API 響應是否成功並提取 data 數組
+
             if (!response.data.success || !response.data.data) {
-                console.warn(`API response is invalid or unsuccessful for guild ${guildId}`);
+                this.logger.warn(`API response is invalid or unsuccessful for guild ${guildId}`);
                 return { role: null, member: null };
             }
-    
-            const reactionRolesArray = response.data.data; // 提取數據數組
-    
-            // 按 message_id 分組 reactionRoles 數據
+
+            const reactionRolesArray = response.data.data;
             const reactionRoles = reactionRolesArray.reduce((acc, item) => {
                 if (!acc[item.message_id]) acc[item.message_id] = [];
                 acc[item.message_id].push({
@@ -91,28 +94,25 @@ class MessageReactionHandler {
                 });
                 return acc;
             }, {});
-    
-            // 檢查是否存在對應的 messageId 配置
+
             if (!reactionRoles[messageId]) {
-                console.warn(`No matching reaction role configuration for message ID ${messageId}`);
+                this.logger.warn(`No matching reaction role configuration for message ID ${messageId} in guild ${guildId}`);
                 return { role: null, member: null };
             }
-    
-            // 匹配 emojiKey 對應的 reaction 數據
+
             const reactionData = reactionRoles[messageId].find(data => data.emoji === emojiKey);
             if (!reactionData) {
-                console.warn(`No matching emoji configuration for message ID ${messageId} and emoji ${emojiKey}`);
+                this.logger.warn(`No matching emoji configuration for message ID ${messageId} and emoji ${emojiKey} in guild ${guildId}`);
                 return { role: null, member: null };
             }
-    
-            // 查找使用者和角色
+
             const roleId = reactionData.role;
             const member = reaction.message.guild.members.cache.get(user.id);
             const role = reaction.message.guild.roles.cache.get(roleId);
-    
+
             return { role, member };
         } catch (error) {
-            console.error(`Error fetching reaction role configuration for guild ${guildId}:`, error.message);
+            this.logger.error(`Error fetching reaction role configuration for guild ${guildId}:`, error);
             return { role: null, member: null };
         }
     }
