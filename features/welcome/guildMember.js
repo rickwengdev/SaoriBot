@@ -29,9 +29,6 @@ class GuildMembers {
      * 註冊事件監聽器。
      */
     registerEvents() {
-        this.client.removeAllListeners('guildMemberAdd');
-        this.client.removeAllListeners('guildMemberRemove');
-
         this.client.on('guildMemberAdd', async (member) => {
             try {
                 this.logger.info(`New member joined: ${member.user.tag} (ID: ${member.user.id}) in guild ${member.guild.id}`);

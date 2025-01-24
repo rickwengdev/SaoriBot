@@ -8,6 +8,7 @@ import DynamicVoiceChannelManager from './features/moderation/dynamicVoiceChanne
 import LoggingManager from './features/moderation/logservermessage.js';
 import GuildMembers from './features/welcome/guildMember.js';
 import Logger from './features/errorhandle/errorhandle.js';
+import trackingMembersNumber from './features/moderation/trackingMembersNumber.js';
 
 dotenv.config();
 
@@ -97,6 +98,9 @@ export function setup() {
     // 設置自動語音頻道功能
     new DynamicVoiceChannelManager(client, process.env.apiEndpoint);
 
+    // 設置伺服器人數追蹤功能
+    new trackingMembersNumber(client, process.env.apiEndpoint);
+
     // 設置日誌功能
     new LoggingManager(client, process.env.apiEndpoint);
 
@@ -112,6 +116,8 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
+
+process.setMaxListeners(20); // 根据需要调整最大值
 
 // 登錄到 Discord
 client.login(process.env.token).catch(error => {
