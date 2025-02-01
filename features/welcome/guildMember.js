@@ -60,6 +60,7 @@ class GuildMembers {
             return response.data.config || null;
         } catch (error) {
             this.logger.error(`Error fetching guild configuration for guild ${guildId}:`, error);
+            console.error(error);
             return null;
         }
     }
@@ -73,17 +74,17 @@ class GuildMembers {
             this.logger.warn(`No welcome channel configured for guild ${member.guild.id}`);
             return;
         }
-
+    
         const welcomeChannel = this.client.channels.cache.get(guildConfig.welcome_channel_id);
         if (!welcomeChannel) {
             this.logger.warn(`Welcome channel not found for guild ${member.guild.id}`);
             return;
         }
-
+    
         const __filename = fileURLToPath(import.meta.url);
         const __dirname = path.dirname(__filename);
         const welcomeBannerPath = path.join(__dirname, 'welcome-banner.png');
-
+    
         let bannerBuffer = null;
         try {
             bannerBuffer = await fs.promises.readFile(welcomeBannerPath);
@@ -91,18 +92,29 @@ class GuildMembers {
         } catch (error) {
             this.logger.warn('Unable to read welcome banner file, proceeding without banner:', error.message);
         }
-
+    
+        // 嵌入訊息的設置
         const embed = new EmbedBuilder()
-            .setTitle(`Welcome ${member.user.tag} to the server!`)
-            .setDescription(`${member.user.toString()} welcome to the server!`)
-            .setThumbnail(member.user.displayAvatarURL({ dynamic: true, format: 'png', size: 256 }));
-
-        const messageOptions = { embeds: [embed] };
+            .setColor('#FFC0CB') // pink
+            .setTitle(`⭐ 歡迎 ${member.user.tag} ！ ⭐`)
+            .setDescription(
+                `✨ 我是Rick❤，歡迎您的到來！✨\n\n` +
+                `這裡就是一個充滿01的地方，也是一個demo的地方！\n\n` +
+                `🌟 希望您能在這裡得到想要的東西！🌟`
+            )
+            .setThumbnail(member.user.displayAvatarURL({ dynamic: true, format: 'png', size: 256 }))
+            .setImage('attachment://welcome-banner.png') // 設置大圖
+    
+        // 訊息選項
+        const messageOptions = { 
+            embeds: [embed],
+        };
         if (bannerBuffer) {
-            messageOptions.files = [new AttachmentBuilder(bannerBuffer, 'welcome-banner.png')];
+            messageOptions.files = [new AttachmentBuilder(bannerBuffer, { name: 'welcome-banner.png' })];
         }
-
+    
         try {
+            // 發送歡迎訊息
             await welcomeChannel.send(messageOptions);
             this.logger.info(`Welcome message sent for member ${member.user.tag} in guild ${member.guild.id}`);
         } catch (error) {
