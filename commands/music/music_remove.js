@@ -3,10 +3,10 @@ import MusicPlayer from '../../features/music/musicPlayer.js';
 import ytdl from '@distube/ytdl-core';
 import Logger from '../../features/errorhandle/errorhandle.js';
 
-// 初始化 Logger
+// Initialize Logger instance
 const logger = new Logger();
 
-// 定義 Slash Command 的結構
+// Define the structure of the Slash Command
 export const data = new SlashCommandBuilder()
     .setName('music_remove')
     .setDescription('Remove a song from the playlist')
@@ -15,36 +15,36 @@ export const data = new SlashCommandBuilder()
             .setDescription('The URL of the song to remove from the playlist')
             .setRequired(true));
 
-// 定義 Slash Command 執行函數
+// Define the execution function for the Slash Command
 export async function execute(interaction) {
     try {
-        await interaction.deferReply(); // 延遲回覆，防止超時
+        await interaction.deferReply(); // Defer reply to prevent timeout
 
         const guildId = interaction.guild.id;
         const userTag = interaction.user.tag;
 
         logger.info(`Command /music_remove triggered by ${userTag} in guild ${guildId}`);
 
-        // 獲取伺服器 ID 和播放器實例
+        // Retrieve the music player instance for the guild
         const player = new MusicPlayer(guildId);
 
-        // 獲取指定的歌曲 URL
+        // Retrieve the specified song URL
         const songUrl = interaction.options.getString('url');
 
         logger.info(`Attempting to remove song with URL: ${songUrl} from the playlist in guild ${guildId}`);
 
-        // 獲取播放列表並檢查是否包含該歌曲
+        // Retrieve the playlist and check if the song exists
         const playlist = player.getPlaylist();
         if (!playlist.includes(songUrl)) {
             logger.warn(`Song URL (${songUrl}) not found in the playlist for guild ${guildId}`);
             return interaction.editReply(`❌ The song URL (${songUrl}) is not in the playlist.`);
         }
 
-        // 使用 removeSong 函數刪除指定歌曲
+        // Remove the specified song from the playlist
         player.removeSong(songUrl);
         logger.info(`Successfully removed song URL (${songUrl}) from the playlist in guild ${guildId}`);
 
-        // 獲取歌曲詳細信息
+        // Retrieve song details
         let videoDetails;
         try {
             const info = await ytdl.getBasicInfo(songUrl);
@@ -54,10 +54,10 @@ export async function execute(interaction) {
             logger.warn(`Unable to fetch song details for URL (${songUrl}): ${error.message}`);
         }
 
-        // 回覆刪除成功的訊息
+        // Respond with a success message
         if (videoDetails) {
             const embed = new EmbedBuilder()
-                .setColor('#FF0000') // YouTube 紅色
+                .setColor('#FF0000') // YouTube red
                 .setTitle(videoDetails.title)
                 .setThumbnail(videoDetails.thumbnails[0]?.url || '')
                 .setDescription('🎵 This song has been successfully removed from the playlist.');

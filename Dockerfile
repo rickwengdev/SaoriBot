@@ -1,12 +1,12 @@
 FROM node
 
-# 复制 package.json 并安装依赖
+# Create app directory
 WORKDIR /usr/src/app
 COPY package*.json ./
 RUN npm install
 
-# 复制应用代码
+# Copy the rest of the app's source code
 COPY . .
 
-# 启动应用
+# Expose the port the app runs in
 CMD [ "node", "main.js" ]

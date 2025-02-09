@@ -1,17 +1,17 @@
 import { PermissionsBitField } from 'discord.js';
 import axios from 'axios';
 import https from 'https';
-import Logger from '../../features/errorhandle/errorhandle.js'; // 假設 Logger 位於此位置
+import Logger from '../../features/errorhandle/errorhandle.js';
 
 /**
  * @class DynamicVoiceChannelManager
- * @description 管理動態語音頻道的創建和刪除。
+ * @description Manages the creation and deletion of dynamic voice channels.
  */
 class DynamicVoiceChannelManager {
     /**
-     * 構造函數
-     * @param {import('discord.js').Client} client - Discord 客戶端實例。
-     * @param {string} apiEndpoint - 獲取動態語音頻道觸發 ID 的 API 端點。
+     * Constructor
+     * @param {import('discord.js').Client} client - Discord client instance.
+     * @param {string} apiEndpoint - API endpoint to fetch trigger channel ID.
      */
     constructor(client, apiEndpoint) {
         this.client = client;
@@ -22,7 +22,7 @@ class DynamicVoiceChannelManager {
     }
 
     /**
-     * 初始化管理器並監聽 `voiceStateUpdate` 事件。
+     * Initialize the manager and listen for `voiceStateUpdate` events.
      */
     init() {
         this.client.on('voiceStateUpdate', (oldState, newState) => {
@@ -31,28 +31,28 @@ class DynamicVoiceChannelManager {
     }
 
     /**
-     * 處理語音狀態更新事件。
-     * @param {import('discord.js').VoiceState} oldState - 更新前的語音狀態。
-     * @param {import('discord.js').VoiceState} newState - 更新後的語音狀態。
+     * Handle voice state update events.
+     * @param {import('discord.js').VoiceState} oldState - Previous voice state.
+     * @param {import('discord.js').VoiceState} newState - Updated voice state.
      */
     async handleVoiceStateUpdate(oldState, newState) {
         try {
             const guildId = newState.guild.id;
 
-            // 獲取觸發頻道 ID
+            // Fetch trigger channel ID
             const triggerChannelId = await this.getTriggerChannelId(guildId);
             if (!triggerChannelId) {
                 this.logger.warn(`Guild ${guildId} does not have a configured trigger channel ID.`);
                 return;
             }
 
-            // 使用者加入觸發頻道
+            // User joined trigger channel
             if (newState.channelId === triggerChannelId) {
                 this.logger.info(`User joined trigger channel ${triggerChannelId} in guild ${guildId}.`);
                 await this.createDynamicChannel(newState);
             }
 
-            // 檢查舊頻道是否需要刪除
+            // Check if old channel needs to be deleted
             if (oldState.channel) {
                 await this.deleteEmptyChannel(oldState.channel);
             }
@@ -62,9 +62,9 @@ class DynamicVoiceChannelManager {
     }
 
     /**
-     * 從 API 獲取觸發頻道 ID。
-     * @param {string} guildId - Discord 伺服器 ID。
-     * @returns {Promise<string|null>} 觸發頻道 ID，如果未配置返回 null。
+     * Fetch the trigger channel ID from the API.
+     * @param {string} guildId - Discord server ID.
+     * @returns {Promise<string|null>} Trigger channel ID, or null if not configured.
      */
     async getTriggerChannelId(guildId) {
         try {
@@ -80,21 +80,21 @@ class DynamicVoiceChannelManager {
     }
 
     /**
-     * 創建動態語音頻道並將使用者移動到該頻道。
-     * @param {import('discord.js').VoiceState} state - 使用者的語音狀態。
+     * Create a dynamic voice channel and move the user to it.
+     * @param {import('discord.js').VoiceState} state - User's voice state.
      */
     async createDynamicChannel(state) {
         const member = state.member;
         if (!member) return;
 
-        // 根據使用者名稱生成頻道名稱
+        // Generate a channel name based on the user's name
         let channelName = member.user.username.trim().replace(/[^a-zA-Z0-9\-_ ]/g, '');
         if (!channelName) channelName = 'Default Channel';
 
         try {
             const channel = await state.guild.channels.create({
                 name: `${channelName}'s Channel`,
-                type: 2, // 語音頻道
+                type: 2, // Voice channel
                 parent: state.channel.parentId,
                 permissionOverwrites: [
                     {
@@ -109,7 +109,7 @@ class DynamicVoiceChannelManager {
                 ],
             });
 
-            // 將使用者移動到新頻道
+            // Move the user to the new channel
             await member.voice.setChannel(channel);
             this.logger.info(`Created and moved user ${member.user.tag} to channel ${channel.id} in guild ${state.guild.id}.`);
         } catch (error) {
@@ -118,12 +118,12 @@ class DynamicVoiceChannelManager {
     }
 
     /**
-     * 刪除空的動態語音頻道。
-     * @param {import('discord.js').VoiceChannel} channel - 要檢查的語音頻道。
+     * Delete an empty dynamic voice channel.
+     * @param {import('discord.js').VoiceChannel} channel - The voice channel to check.
      */
     async deleteEmptyChannel(channel) {
         try {
-            // 檢查頻道是否為空且為動態創建的頻道
+            // Check if channel is empty and dynamically created
             if (channel.members.size === 0 && channel.name.includes("'s Channel")) {
                 await channel.delete();
                 this.logger.info(`Deleted empty dynamic channel ${channel.id} in guild ${channel.guild.id}.`);

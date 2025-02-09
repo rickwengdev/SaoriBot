@@ -1,129 +1,129 @@
 # SaoriBot
 
-SaoriBot 是一款基於 Node.js 和 Discord.js 的高效 Discord 機器人，旨在增強伺服器的互動性與管理功能。
+SaoriBot is a high-performance Discord bot based on Node.js and Discord.js, designed to enhance server interaction and management functionality.
 
-## 功能特點
+## Features
 
-- **指令模組化管理**：透過 `commands` 目錄組織和管理各種機器人指令，提供靈活的擴展性。
-- **功能模組**：在 `features` 目錄中實現特定功能，提升機器人的可定制性。
-- **自動指令部署**：使用 `.deploy-commands.js` 腳本自動部署指令，簡化開發流程。
-- **容器化部署支持**：提供 `Dockerfile`，方便使用 Docker 進行部署和運行。
+- **Modular Command Management**: Organize and manage various bot commands through the `commands` directory, providing flexibility for expansion.
+- **Feature Modules**: Implement specific functionalities in the `features` directory to enhance bot customization.
+- **Automatic Command Deployment**: Use the `.deploy-commands.js` script to deploy commands automatically, simplifying the development process.
+- **Containerized Deployment Support**: Provides a `Dockerfile` for easy deployment and execution using Docker.
 
-## 安裝與配置
+## Installation & Configuration
 
-1. **克隆專案**：
+### Clone the Repository
 
-    ```bash
-    git clone https://github.com/rickwengdev/SaoriBot.git
-    cd SaoriBot
-    ```
+```bash
+git clone https://github.com/rickwengdev/SaoriBot.git
+cd SaoriBot
+```
 
-2. **安裝依賴**：
+### Install Dependencies
 
-    確保已安裝 Node.js（版本需符合 package.json 中的要求），然後執行：
+Ensure that Node.js (matching the required version in `package.json`) is installed, then run:
 
-    ```bash
-    npm install
-    ```
+```bash
+npm install
+```
 
-3. **配置環境變數**：
+### Configure Environment Variables
 
-    在專案根目錄下創建 `.env` 文件，並添加以下內容：
+Create a `.env` file in the project root directory and add the following content:
 
-    ```bash
-    token=你的 Discord 機器人令牌
-    client_id=你的客戶端 ID
-    ```
+```bash
+token=your_discord_bot_token
+client_id=your_client_id
+```
 
-    請將上述值替換為實際的機器人令牌和相關 ID。
+Replace the values with your actual bot token and relevant IDs.
 
-## 運行機器人
+## Running the Bot
 
-- 使用 Node.js 運行:
+### Using Node.js
 
-  ```bash
-  node main.js
-  ```
+```bash
+node main.js
+```
 
-- 使用 Docker 運行：
+### Using Docker
 
-  確保已安裝 Docker，然後在專案根目錄下執行：
+Ensure that Docker is installed, then execute the following in the project root directory:
 
-  ```bash
-  docker build -t saoribot .
-  docker run -d saoribot
-  ```
+```bash
+docker build -t saoribot .
+docker run -d saoribot
+```
 
-## 添加新指令
+## Adding New Commands
 
-1. 創建指令文件：
+### Create a Command File
 
-    在 `commands` 目錄中，創建一個新的 JavaScript 文件，例如 `ping.js`。
+Inside the `commands` directory, create a new JavaScript file, e.g., `ping.js`.
 
-2. 編寫指令邏輯：
+### Write the Command Logic
 
-    在新文件中，按照以下範例結構編寫指令邏輯：
+In the new file, write the command logic using ES6 syntax:
 
-    ```javascript
-    module.exports = {
-      name: 'ping',
-      description: '回應 Pong!',
-      execute(interaction) {
-         interaction.reply('Pong!');
-      },
-    };
-    ```
+```javascript
+export default {
+  name: 'ping',
+  description: 'Responds with Pong!',
+  execute(interaction) {
+    interaction.reply('Pong!');
+  },
+};
+```
 
-3. 部署指令：
+### Deploy the Command
 
-    每次添加或修改指令後，運行以下命令以更新 Discord 應用中的指令：
+Every time you add or modify a command, run the following command to update the commands in the Discord application:
 
-    ```bash
-    node .deploy-commands.js
-    ```
+```bash
+node .deploy-commands.js
+```
 
-## 添加新功能模組
+## Adding New Features
 
-1. 創建功能文件：
+### Create a Feature File
 
-    在 `features` 目錄中，創建一個新的 JavaScript 文件，例如 `welcome.js`。
+Inside the `features` directory, create a new JavaScript file, e.g., `welcome.js`.
 
-2. 編寫功能邏輯：
+### Write the Feature Logic
 
-    在新文件中，按照以下範例結構編寫功能邏輯：
+In the new file, implement the feature using ES6 syntax:
 
-    ```javascript
-    module.exports = (client) => {
-      client.on('guildMemberAdd', (member) => {
-         const channel = member.guild.systemChannel;
-         if (channel) {
-            channel.send(`歡迎 ${member} 加入我們的伺服器!`);
-         }
-      });
-    };
-    ```
+```javascript
+export default (client) => {
+  client.on('guildMemberAdd', (member) => {
+    const channel = member.guild.systemChannel;
+    if (channel) {
+      channel.send(`Welcome ${member} to our server!`);
+    }
+  });
+};
+```
 
-3. 在主文件中加載功能：
+### Load the Feature in the Main File
 
-    打開 `main.js`，添加以下代碼以加載新功能模組：
+Open `main.js` and add the following code to load the new feature module:
 
-    ```javascript
-    const welcomeFeature = require('./features/welcome');
-    welcomeFeature(client);
-    ```
+```javascript
+import welcomeFeature from './features/welcome.js';
+welcomeFeature(client);
+```
 
-## 貢獻指南
+## Contribution Guidelines
 
-歡迎對 SaoriBot 的改進和貢獻！在提交拉取請求（PR）之前，請確保：
+We welcome contributions to SaoriBot! Before submitting a pull request (PR), please ensure:
 
-- **代碼風格**：遵循專案的代碼風格和結構。
-- **測試**：在本地環境中測試您的更改，確保沒有引入新的問題。
-- **文檔**：如有必要，更新相關文檔以反映您的更改。
+- **Code Style**: Follow the project's coding style and structure.
+- **Testing**: Test your changes locally to ensure no new issues are introduced.
+- **Documentation**: Update relevant documentation if necessary to reflect your changes.
 
-## 支援與聯絡
+## Support & Contact
 
-如在使用過程中遇到問題，請在 GitHub 問題頁面提交問題。我們將盡快協助解決。
+If you encounter any issues while using SaoriBot, please submit an issue on the GitHub issues page. We will assist as soon as possible.
 
-## 授權條款
+## License
 
-此專案採用 [ 授權條款](LICENSE)。詳情請參閱 LICENSE 文件。
+This project is licensed under the [LICENSE](LICENSE). Please refer to the LICENSE file for details.

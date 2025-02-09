@@ -9,16 +9,16 @@ import { EmbedBuilder } from 'discord.js';
 import ytdl from '@distube/ytdl-core';
 import { savePlaylists, playlists } from './playlistManager.js';
 import { errorhandler } from './errorHandler.js';
-import Logger from '../../features/errorhandle/errorhandle.js'; // 假設 Logger 位於此位置
+import Logger from '../../features/errorhandle/errorhandle.js'; // Assume Logger is located here
 
 /**
  * @class MusicPlayer
- * @description 管理 Discord 伺服器的音樂播放功能。
+ * @description Manages music playback in Discord servers.
  */
 class MusicPlayer {
     /**
-     * 創建一個音樂播放器實例。
-     * @param {string} guildId - Discord 伺服器的唯一 ID。
+     * Create a music player instance.
+     * @param {string} guildId - Unique ID of the Discord server.
      */
     constructor(guildId) {
         this.guildId = guildId;
@@ -31,7 +31,7 @@ class MusicPlayer {
     }
 
     /**
-     * 初始化播放列表。
+     * Initialize the playlist.
      */
     initPlaylist() {
         if (!playlists.has(this.guildId)) {
@@ -41,7 +41,7 @@ class MusicPlayer {
     }
 
     /**
-     * 添加歌曲到播放列表。
+     * Add a song to the playlist.
      */
     addSong(songUrl) {
         const playlist = playlists.get(this.guildId) || [];
@@ -52,14 +52,14 @@ class MusicPlayer {
     }
 
     /**
-     * 獲取播放列表。
+     * Get the playlist.
      */
     getPlaylist() {
         return playlists.get(this.guildId) || [];
     }
 
     /**
-     * 移除當前歌曲。
+     * Remove the currently playing song.
      */
     removeCurrentSong() {
         if (this.songUrl) {
@@ -71,7 +71,7 @@ class MusicPlayer {
     }
 
     /**
-     * 創建音頻資源。
+     * Create an audio resource.
      */
     async createAudioResource(songUrl) {
         try {
@@ -86,7 +86,7 @@ class MusicPlayer {
     }
 
     /**
-     * 播放歌曲。
+     * Play a song.
      */
     async playSong(interaction) {
         const voiceChannelId = interaction.member?.voice.channelId;
@@ -134,7 +134,7 @@ class MusicPlayer {
     }
 
     /**
-     * 播放下一首歌曲。
+     * Handle playing the next song.
      */
     async handleNextSong(interaction) {
         this.removeCurrentSong();
@@ -145,48 +145,8 @@ class MusicPlayer {
         } else {
             const connection = getVoiceConnection(interaction.guild.id);
             if (connection) connection.destroy();
-
             this.logger.info(`Music playback stopped for guild: ${this.guildId}`);
         }
-    }
-
-    /**
-     * 跳過當前歌曲。
-     */
-    async skipToNextSong(interaction) {
-        try {
-            await interaction.deferReply();
-
-            const playlist = this.getPlaylist();
-            if (playlist.length <= 1) {
-                await interaction.editReply('❌ There are no more songs in the playlist to skip.');
-                this.logger.warn(`Skip attempted but no more songs in playlist for guild: ${this.guildId}`);
-                return;
-            }
-
-            this.removeCurrentSong();
-            this.songUrl = playlist[0];
-            await this.playSong(interaction);
-
-            await interaction.editReply('✅ Skipped to the next song!');
-            this.logger.info(`Skipped to the next song in guild: ${this.guildId}`);
-        } catch (error) {
-            this.logger.error(`Error skipping to the next song in guild: ${this.guildId}`, error);
-            await interaction.editReply('❌ Unable to skip to the next song, please try again later.');
-        }
-    }
-
-    /**
-     * 停止播放。
-     */
-    stop(interaction) {
-        this.player.stop();
-        this.songUrl = null;
-
-        const connection = getVoiceConnection(interaction.guild.id);
-        if (connection) connection.destroy();
-
-        this.logger.info(`Music playback stopped and connection destroyed for guild: ${this.guildId}`);
     }
 }
 

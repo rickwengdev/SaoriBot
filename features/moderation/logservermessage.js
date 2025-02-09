@@ -1,17 +1,17 @@
 import { Events } from 'discord.js';
 import axios from 'axios';
 import https from 'https';
-import Logger from '../../features/errorhandle/errorhandle.js'; // 假設 Logger 位於此位置
+import Logger from '../../features/errorhandle/errorhandle.js';
 
 /**
  * @class LoggingManager
- * @description 管理 Discord 伺服器的日誌功能，包括監聽成員更名和語音狀態更新。
+ * @description Manages logging for Discord servers, including nickname changes and voice state updates.
  */
 class LoggingManager {
     /**
-     * 創建一個 LoggingManager 實例。
-     * @param {import('discord.js').Client} client - Discord 客戶端實例。
-     * @param {string} apiEndpoint - 獲取日誌頻道 ID 的 API 端點。
+     * Create a LoggingManager instance.
+     * @param {import('discord.js').Client} client - Discord client instance.
+     * @param {string} apiEndpoint - API endpoint to fetch log channel ID.
      */
     constructor(client, apiEndpoint) {
         this.client = client;
@@ -22,7 +22,7 @@ class LoggingManager {
     }
 
     /**
-     * 初始化日誌管理器並監聽相關事件。
+     * Initialize the logging manager and listen for relevant events.
      */
     init() {
         this.client.on(Events.GuildMemberUpdate, (oldMember, newMember) => {
@@ -36,9 +36,9 @@ class LoggingManager {
     }
 
     /**
-     * 從 API 獲取日誌頻道 ID。
-     * @param {string} guildId - Discord 伺服器 ID。
-     * @returns {Promise<string|null>} 日誌頻道 ID，如果未配置返回 null。
+     * Fetch the log channel ID from the API.
+     * @param {string} guildId - Discord server ID.
+     * @returns {Promise<string|null>} Log channel ID, or null if not configured.
      */
     async getLogChannelId(guildId) {
         try {
@@ -54,11 +54,10 @@ class LoggingManager {
     }
 
     /**
-     * 處理成員更改暱稱事件。
+     * Handle nickname change events.
      */
     async handleNicknameChange(oldMember, newMember) {
         const guildId = newMember.guild.id;
-
         const logChannelId = await this.getLogChannelId(guildId);
         if (!logChannelId) return;
 
@@ -82,11 +81,10 @@ class LoggingManager {
     }
 
     /**
-     * 處理語音狀態更新事件。
+     * Handle voice state update events.
      */
     async handleVoiceStateUpdate(oldState, newState) {
         const guildId = newState.guild.id;
-
         const logChannelId = await this.getLogChannelId(guildId);
         if (!logChannelId) return;
 
@@ -110,11 +108,10 @@ class LoggingManager {
     }
 
     /**
-     * 處理成員身份組變更事件。
+     * Handle role change events.
      */
     async handleRoleChange(oldMember, newMember) {
         const guildId = newMember.guild.id;
-
         const logChannelId = await this.getLogChannelId(guildId);
         if (!logChannelId) return;
 

@@ -1,49 +1,49 @@
 import { SlashCommandBuilder } from "discord.js";
 import Logger from "../../features/errorhandle/errorhandle.js";
 
-// 初始化 Logger
+// Initialize Logger instance
 const logger = new Logger();
 
 export const data = new SlashCommandBuilder()
     .setName('randomchar')
-    .setDescription('Randomly returns a user-inputted word') // 隨機返回一個使用者輸入的字
+    .setDescription('Randomly returns a user-inputted word') // Randomly selects a word from user input
     .addStringOption((option) =>
         option
             .setName('input')
-            .setDescription('Input string, separated by spaces') // 輸入的字串，用空白分割
+            .setDescription('Input string, separated by spaces') // Input string, words separated by spaces
             .setRequired(true)
     );
 
 export async function execute(interaction) {
     const input = interaction.options.getString('input');
     const userTag = interaction.user.tag;
-    const guildId = interaction.guild?.id || 'DM'; // 若為 DM，guildId 為 undefined
+    const guildId = interaction.guild?.id || 'DM'; // If DM, guildId is undefined
 
     try {
-        // Log 指令被觸發的資訊
+        // Log command trigger information
         logger.info(`Command /randomchar triggered by ${userTag} in guild ${guildId} with input: "${input}"`);
 
-        // 將輸入的字串拆分成單字陣列
+        // Split the input string into an array of words
         const words = input.trim().split(/\s+/);
 
-        // 若未輸入有效的字，回覆提示
+        // If no valid words are provided, send a response
         if (words.length === 0) {
             logger.warn(`User ${userTag} in guild ${guildId} provided no valid words.`);
-            await interaction.reply('You did not provide any words.'); // 你沒有提供任何字。
+            await interaction.reply('You did not provide any words.');
             return;
         }
 
-        // 隨機選擇一個單字
+        // Randomly select a word
         const randomIndex = Math.floor(Math.random() * words.length);
         const randomWord = words[randomIndex];
 
-        // Log 隨機選擇的單字
+        // Log the randomly selected word
         logger.info(`Randomly selected word "${randomWord}" for user ${userTag} in guild ${guildId}`);
 
-        // 回覆隨機選擇的單字
+        // Reply with the randomly selected word
         await interaction.reply(randomWord);
     } catch (error) {
-        // 錯誤處理
+        // Error handling
         logger.error(`Error in /randomchar command in guild ${guildId}: ${error.message}`);
         await interaction.reply('❌ An error occurred while processing your request. Please try again later.');
     }

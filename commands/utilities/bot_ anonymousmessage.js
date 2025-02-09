@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Logger from '../../features/errorhandle/errorhandle.js';
 
-// 初始化 Logger
+// Initialize Logger instance
 const logger = new Logger();
 
 export const data = new SlashCommandBuilder()
@@ -13,7 +13,7 @@ export const data = new SlashCommandBuilder()
     .setRequired(true))
   .addStringOption(option => 
     option.setName('messageid')
-    .setDescription('Message id to reply to'));
+    .setDescription('Message ID to reply to'));
 
 export async function execute(interaction) {
   const message = interaction.options.getString('message');
@@ -26,7 +26,7 @@ export async function execute(interaction) {
 
     if (messageId) {
       logger.info(`Anonymous message is a reply to message ID: ${messageId}`);
-      // 發送回覆訊息
+      // Send reply message
       await interaction.reply({
         content: `Anonymous message sent: "${message}", reply to: ${messageId}`,
         ephemeral: true,
@@ -37,7 +37,7 @@ export async function execute(interaction) {
       });
       logger.info(`Anonymous reply sent successfully in guild ${guildId || 'DM'}`);
     } else {
-      // 發送普通匿名訊息
+      // Send a regular anonymous message
       await interaction.reply({
         content: `Anonymous message sent: "${message}"`,
         ephemeral: true,

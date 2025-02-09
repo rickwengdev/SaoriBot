@@ -1,13 +1,13 @@
-import Logger from '../../features/errorhandle/errorhandle.js'; // 假設 Logger 位於此位置
+import Logger from '../../features/errorhandle/errorhandle.js';
 
 /**
  * @class MessageDeleter
- * @description 提供刪除 Discord 頻道消息的功能，包括分批刪除。
+ * @description Provides functionality to delete messages from a Discord channel, including batch deletion.
  */
 class MessageDeleter {
     /**
      * @constructor
-     * @param {object} interaction - Discord 的交互對象
+     * @param {object} interaction - Discord interaction object.
      */
     constructor(interaction) {
         if (!interaction || !interaction.channel) {
@@ -20,10 +20,10 @@ class MessageDeleter {
 
     /**
      * @method deleteMessages
-     * @description 根據數量和時間範圍刪除消息。
-     * @param {number} numberOfMessages - 要刪除的消息數量 (默認: 1)。
-     * @param {boolean} isLargeTimeRange - 是否刪除較大時間範圍內的消息 (默認: false)。
-     * @returns {Promise<number>} 刪除的消息數量。
+     * @description Deletes messages based on quantity and time range.
+     * @param {number} numberOfMessages - Number of messages to delete (default: 1).
+     * @param {boolean} isLargeTimeRange - Whether to delete messages from a larger time range (default: false).
+     * @returns {Promise<number>} Number of messages deleted.
      */
     async deleteMessages(numberOfMessages = 1, isLargeTimeRange = false) {
         if (isLargeTimeRange || numberOfMessages > 100) {
@@ -35,13 +35,13 @@ class MessageDeleter {
 
     /**
      * @method simpleDelete
-     * @description 簡單刪除消息，不超過 Discord 限制（100 條）。
-     * @param {number} numberOfMessages - 要刪除的消息數量。
-     * @returns {Promise<number>} 刪除的消息數量。
+     * @description Deletes messages simply, without exceeding Discord limits (100 messages max).
+     * @param {number} numberOfMessages - Number of messages to delete.
+     * @returns {Promise<number>} Number of messages deleted.
      */
     async simpleDelete(numberOfMessages) {
         try {
-            const deletedMessages = await this.channel.bulkDelete(numberOfMessages, true); // Discord API 限制最多 14 天內消息
+            const deletedMessages = await this.channel.bulkDelete(numberOfMessages, true); // Discord API restricts to messages within 14 days
             this.logger.info(`✅ Successfully deleted ${deletedMessages.size} messages.`);
             return deletedMessages.size;
         } catch (error) {
@@ -52,14 +52,14 @@ class MessageDeleter {
 
     /**
      * @method bulkDeleteMessages
-     * @description 分批刪除消息，每批最多 100 條。
-     * @param {number} numberOfMessages - 要刪除的消息數量。
-     * @returns {Promise<number>} 刪除的消息數量。
+     * @description Deletes messages in batches, with a maximum of 100 per batch.
+     * @param {number} numberOfMessages - Number of messages to delete.
+     * @returns {Promise<number>} Number of messages deleted.
      */
     async bulkDeleteMessages(numberOfMessages) {
         let remainingMessages = numberOfMessages;
         const batchSize = 100;
-        const delayBetweenBatches = 500; // 毫秒
+        const delayBetweenBatches = 500; // Milliseconds
 
         try {
             while (remainingMessages > 0) {
@@ -84,28 +84,13 @@ class MessageDeleter {
     }
 
     /**
-     * @method shouldAbort
-     * @description 判斷是否應該中止交互。
-     * @returns {boolean} 是否應中止交互。
-     */
-    shouldAbort() {
-        const shouldAbort = this.interaction.deferred || this.interaction.replied || !this.interaction.isCommand();
-        if (shouldAbort) {
-            this.logger.warn('❌ Interaction aborted:', this.interaction);
-        }
-        return shouldAbort;
-    }
-
-    /**
      * @method handleInteraction
-     * @description 處理消息刪除的交互邏輯。
-     * @param {number} numberOfMessages - 要刪除的消息數量。
-     * @param {boolean} isLargeTimeRange - 是否刪除較大時間範圍內的消息。
+     * @description Handles message deletion interaction logic.
+     * @param {number} numberOfMessages - Number of messages to delete.
+     * @param {boolean} isLargeTimeRange - Whether to delete messages from a larger time range.
      * @returns {Promise<void>}
      */
     async handleInteraction(numberOfMessages = 1, isLargeTimeRange = false) {
-        if (this.shouldAbort()) return;
-
         try {
             await this.interaction.deferReply({ ephemeral: true });
             this.logger.info(`Starting to delete ${numberOfMessages} messages (Large time range: ${isLargeTimeRange})`);
@@ -124,9 +109,9 @@ class MessageDeleter {
 
     /**
      * @method handleErrorResponse
-     * @description 統一異常處理。
-     * @param {string} errorMessage - 錯誤消息。
-     * @param {Error} error - 錯誤對象。
+     * @description Unified error handling.
+     * @param {string} errorMessage - Error message to be logged.
+     * @param {Error} error - Error object.
      */
     async handleErrorResponse(errorMessage, error) {
         this.logger.error(errorMessage, error);
@@ -139,8 +124,8 @@ class MessageDeleter {
 
     /**
      * @method delay
-     * @description 增加延遲，適用於批次操作。
-     * @param {number} ms - 延遲的毫秒數。
+     * @description Adds delay, useful for batch operations.
+     * @param {number} ms - Number of milliseconds to delay.
      * @returns {Promise<void>}
      */
     delay(ms) {

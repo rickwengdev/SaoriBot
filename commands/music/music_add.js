@@ -5,13 +5,13 @@ import cheerio from 'cheerio';
 import ytdl from '@distube/ytdl-core';
 import Logger from '../../features/errorhandle/errorhandle.js';
 
-// 初始化 Logger
+// Initialize Logger instance
 const logger = new Logger();
 
 /**
- * 檢查是否為有效的 YouTube 鏈接
- * @param {string} url - 待檢查的 URL
- * @returns {Promise<boolean>} - 是否為有效的 YouTube 鏈接
+ * Validate whether a given URL is a valid YouTube link
+ * @param {string} url - URL to be validated
+ * @returns {Promise<boolean>} - Whether the URL is a valid YouTube link
  */
 async function isValidYoutubeUrl(url) {
     try {
@@ -27,9 +27,9 @@ async function isValidYoutubeUrl(url) {
 }
 
 /**
- * 獲取 YouTube 視頻的基本信息
- * @param {string} url - YouTube 視頻 URL
- * @returns {Promise<Object>} - 視頻基本信息
+ * Retrieve basic information of a YouTube video
+ * @param {string} url - YouTube video URL
+ * @returns {Promise<Object>} - Basic video details
  */
 async function getVideoInfo(url) {
     try {
@@ -46,8 +46,8 @@ async function getVideoInfo(url) {
 }
 
 /**
- * 添加歌曲到播放列表
- * @param {import('discord.js').CommandInteraction} interaction - Discord 指令交互對象
+ * Add a song to the playlist
+ * @param {import('discord.js').CommandInteraction} interaction - Discord command interaction object
  */
 async function addToPlaylist(interaction) {
     try {
@@ -58,28 +58,28 @@ async function addToPlaylist(interaction) {
 
         logger.info(`Command /music_add triggered by ${interaction.user.tag} in guild ${guildId} with URL: ${songUrl}`);
 
-        // 驗證 URL 是否有效
+        // Validate URL
         if (!await isValidYoutubeUrl(songUrl)) {
             logger.warn(`Invalid YouTube URL provided by ${interaction.user.tag}: ${songUrl}`);
             await interaction.editReply(`The provided URL "${songUrl}" is not a valid YouTube video.`);
             return;
         }
 
-        // 獲取伺服器專屬播放器並添加歌曲
+        // Get the guild-specific music player and add the song
         const player = new MusicPlayer(guildId);
         player.addSong(songUrl);
         logger.info(`Added song to playlist for guild ${guildId}: ${songUrl}`);
 
-        // 獲取視頻詳細信息
+        // Retrieve video details
         const videoDetails = await getVideoInfo(songUrl);
 
-        // 構建嵌入消息
+        // Construct an embed message
         const embed = new EmbedBuilder()
-            .setColor('#FF0000') // YouTube 紅色
+            .setColor('#FF0000') // YouTube red
             .setTitle(videoDetails.title)
             .setURL(songUrl)
-            .setThumbnail(videoDetails.thumbnails[0]?.url || '') // 防止縮略圖為空
-            .setDescription(videoDetails.description.slice(0, 200) + '...'); // 限制描述長度
+            .setThumbnail(videoDetails.thumbnails[0]?.url || '') // Handle empty thumbnails
+            .setDescription(videoDetails.description.slice(0, 200) + '...'); // Limit description length
 
         logger.info(`Successfully created embed for video: ${videoDetails.title}`);
 
@@ -90,7 +90,7 @@ async function addToPlaylist(interaction) {
     }
 }
 
-// 定義 Slash Command
+// Define the Slash Command
 export const data = new SlashCommandBuilder()
     .setName('music_add')
     .setDescription('Add a song to a playlist')
@@ -99,7 +99,7 @@ export const data = new SlashCommandBuilder()
             .setDescription('The URL of the song to add to the playlist')
             .setRequired(true));
 
-// 定義 Slash Command 執行函數
+// Define the Slash Command execution function
 export async function execute(interaction) {
     await addToPlaylist(interaction);
 }

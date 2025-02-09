@@ -1,29 +1,29 @@
 import axios from 'axios';
 import https from 'https';
-import Logger from '../../features/errorhandle/errorhandle.js'; // 假設 Logger 位於此位置
+import Logger from '../../features/errorhandle/errorhandle.js';
 
 /**
  * @class MessageReactionHandler
- * @description 管理消息反應的角色分配功能。
+ * @description Manages role assignment based on message reactions.
  */
 class MessageReactionHandler {
     /**
-     * 構造函數
-     * @param {import('discord.js').Client} client - Discord 客戶端實例。
-     * @param {string} apiEndpoint - 獲取反應角色配置的 API 端點。
+     * Constructor
+     * @param {import('discord.js').Client} client - Discord client instance.
+     * @param {string} apiEndpoint - API endpoint to fetch reaction role configurations.
      */
     constructor(client, apiEndpoint) {
         this.client = client;
         this.apiEndpoint = apiEndpoint;
         this.logger = new Logger();
 
-        // 初始化事件處理
+        // Initialize event handlers
         this.client.on('messageReactionAdd', this.handleReactionAdd.bind(this));
         this.client.on('messageReactionRemove', this.handleReactionRemove.bind(this));
     }
 
     /**
-     * 處理添加反應的事件。
+     * Handles the addition of a reaction.
      */
     async handleReactionAdd(reaction, user) {
         if (user.bot || !reaction.message.guild) return;
@@ -44,7 +44,7 @@ class MessageReactionHandler {
     }
 
     /**
-     * 處理移除反應的事件。
+     * Handles the removal of a reaction.
      */
     async handleReactionRemove(reaction, user) {
         if (user.bot || !reaction.message.guild) return;
@@ -65,7 +65,7 @@ class MessageReactionHandler {
     }
 
     /**
-     * 獲取對應的角色和成員。
+     * Retrieves the corresponding role and member.
      */
     async getRoleAndMember(reaction, user) {
         const guildId = reaction.message.guild.id;

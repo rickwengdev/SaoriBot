@@ -1,5 +1,5 @@
 import fs from 'fs';
-import Logger from '../../features/errorhandle/errorhandle.js'; // 假設 Logger 位於此位置
+import Logger from '../../features/errorhandle/errorhandle.js'; // Assume Logger is located here
 
 /** @type {Map<string, string[]>} */
 export let playlists = new Map();
@@ -8,7 +8,7 @@ const playlistPath = './features/music/playlists.json';
 const logger = new Logger();
 
 /**
- * 保存播放列表到文件。
+ * Save playlists to a file.
  */
 export const savePlaylists = () => {
     try {
@@ -21,7 +21,7 @@ export const savePlaylists = () => {
 };
 
 /**
- * 加載播放列表。
+ * Load playlists from a file.
  */
 export const loadPlaylists = () => {
     if (fs.existsSync(playlistPath)) {

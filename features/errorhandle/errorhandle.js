@@ -3,71 +3,78 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * Logger 日誌管理器，用於記錄應用運行日誌及處理崩潰報告。
+ * Logger class for managing application logs and handling crash reports.
  */
 class Logger {
   /**
-   * 創建 Logger 實例。
-   * @param {string} [logDir='logs'] - 日誌文件的存儲目錄（默認為 '../../logs'）。
+   * Create a Logger instance.
+   * @param {string} [logDir='logs'] - Directory to store log files (default: 'logs').
    */
   constructor(logDir = 'logs') {
     this.logDir = logDir;
+    this.logDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 
-    // 創建日誌目錄
+    // Create log directory if it does not exist
     if (!fs.existsSync(this.logDir)) {
       fs.mkdirSync(this.logDir);
     }
 
-    // 初始化 Logger 實例
+    // Initialize Winston logger with daily rotating logs
     this.logger = winston.createLogger({
       levels: winston.config.npm.levels,
       format: winston.format.combine(
         winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        winston.format.printf(({ level, message, timestamp }) => {
-          return `[${timestamp}] [${level.toUpperCase()}]: ${message}`;
+        winston.format.printf(({ level, message, timestamp, stack }) => {
+          return stack
+            ? `[${timestamp}] [${level.toUpperCase()}]: ${message}\n${stack}`
+            : `[${timestamp}] [${level.toUpperCase()}]: ${message}`;
         })
       ),
       transports: [
-        // 終端輸出
+        // Console output
         new winston.transports.Console({
-          level: 'debug', // 終端顯示 debug 及以上日誌
+          level: 'debug', // Display debug level and above logs in console
+          format: winston.format.combine(
+            winston.format.colorize(),
+            winston.format.simple()
+          )
         }),
-        // 文件輸出
+        // File output with daily log rotation
         new winston.transports.File({
-          filename: path.join(this.logDir, 'app.log'),
-          level: 'info', // 文件記錄 info 及以上日誌
+          filename: path.join(this.logDir, `app-${this.logDate}.log`),
+          level: 'info', // Store info level and above logs in file
         }),
       ],
     });
 
-    // 設置崩潰處理
+    // Set up crash handlers
     this.setupCrashHandlers();
   }
 
   /**
-   * 設置崩潰處理事件監聽器。
-   * 捕獲未處理異常和未捕獲的 Promise 拒絕，並生成崩潰報告。
+   * Set up crash event handlers.
+   * Captures uncaught exceptions and unhandled promise rejections, logging crash reports.
    * @private
    */
   setupCrashHandlers() {
     process.on('uncaughtException', (err) => {
       this.logCrashReport(err);
-      console.error('Application crashed! Check crash.log for details.');
-      process.exit(1); // 強制退出程式
+      console.error('Application crashed! Check crash log for details.', err);
+      process.exit(1); // Force exit the process
     });
 
     process.on('unhandledRejection', (reason) => {
-      this.logger.error(`Unhandled Promise Rejection: ${reason}`);
+      this.logger.error(`Unhandled Promise Rejection:`, reason);
     });
   }
 
   /**
-   * 生成崩潰報告文件。
-   * @param {Error} error - 捕獲的異常對象。
+   * Generate a crash report file with a timestamped filename.
+   * @param {Error} error - The captured exception.
    * @private
    */
   logCrashReport(error) {
-    const crashLogPath = path.join(this.logDir, 'crash.log');
+    const crashLogPath = path.join(this.logDir, `crash-${this.logDate}.log`);
     const crashLog = `
 === Application Crash Report ===
 Timestamp: ${new Date().toISOString()}
@@ -75,39 +82,43 @@ Error: ${error.message}
 Stack Trace: ${error.stack}
 ================================
 `;
-    fs.writeFileSync(crashLogPath, crashLog, 'utf8');
+    fs.appendFileSync(crashLogPath, crashLog, 'utf8');
   }
 
   /**
-   * 記錄 debug 級別的日誌信息。
-   * @param {string} message - 要記錄的日誌信息。
+   * Log a debug level message.
+   * @param {string} message - Message to log.
    */
   debug(message) {
     this.logger.debug(message);
   }
 
   /**
-   * 記錄 info 級別的日誌信息。
-   * @param {string} message - 要記錄的日誌信息。
+   * Log an info level message.
+   * @param {string} message - Message to log.
    */
   info(message) {
     this.logger.info(message);
   }
 
   /**
-   * 記錄 warn 級別的日誌信息。
-   * @param {string} message - 要記錄的日誌信息。
+   * Log a warning level message.
+   * @param {string} message - Message to log.
    */
   warn(message) {
     this.logger.warn(message);
   }
 
   /**
-   * 記錄 error 級別的日誌信息。
-   * @param {string} message - 要記錄的日誌信息。
+   * Log an error level message, handling error objects properly.
+   * @param {string|Error} error - Message or error object to log.
    */
-  error(message) {
-    this.logger.error(message);
+  error(error) {
+    if (error instanceof Error) {
+      this.logger.error(error.message, { stack: error.stack });
+    } else {
+      this.logger.error(error);
+    }
   }
 }
 

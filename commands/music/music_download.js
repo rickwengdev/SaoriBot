@@ -5,13 +5,13 @@ import ytdl from '@distube/ytdl-core';
 import path from 'path';
 import Logger from '../../features/errorhandle/errorhandle.js';
 
-// 初始化 Logger
+// Initialize Logger instance
 const logger = new Logger();
 
 const downloadPath = path.resolve('./downloads');
 
 /**
- * 初始化下載目錄
+ * Initialize the download directory
  */
 async function initializeDownloadPath() {
     try {
@@ -29,10 +29,10 @@ async function initializeDownloadPath() {
 }
 
 /**
- * 下載 YouTube 音頻為 MP3
- * @param {string} url - YouTube 視頻 URL
- * @param {string} filename - 保存的文件名
- * @returns {Promise<string>} - 文件路徑
+ * Download YouTube audio as MP3
+ * @param {string} url - YouTube video URL
+ * @param {string} filename - Filename to save
+ * @returns {Promise<string>} - Path of the downloaded file
  */
 async function downloadMp3(url, filename) {
     const filePath = path.join(downloadPath, filename);
@@ -54,12 +54,12 @@ async function downloadMp3(url, filename) {
 }
 
 /**
- * 處理下載並上傳 MP3 文件
- * @param {import('discord.js').CommandInteraction} interaction - Discord 指令交互對象
+ * Handle downloading and uploading MP3 file
+ * @param {import('discord.js').CommandInteraction} interaction - Discord command interaction object
  */
 async function downloadAndUploadVideo(interaction) {
     try {
-        await interaction.deferReply(); // 延遲回覆以處理時間
+        await interaction.deferReply(); // Defer reply to allow processing time
 
         const videoUrl = interaction.options.getString('url');
         logger.info(`Command /download_video triggered by ${interaction.user.tag} with URL: ${videoUrl}`);
@@ -73,28 +73,28 @@ async function downloadAndUploadVideo(interaction) {
         const videoTitle = info.videoDetails.title.replace(/[^a-zA-Z0-9_\-]/g, '_');
         const mp3Filename = `${videoTitle}.mp3`;
 
-        // 下載 MP3 文件
+        // Download MP3 file
         const mp3Path = await downloadMp3(videoUrl, mp3Filename);
 
-        // 檢查文件大小
+        // Check file size
         const stats = await fs.stat(mp3Path);
         const fileSizeInMB = stats.size / (1024 * 1024);
-        if (fileSizeInMB > 8) { // 8MB 的 Discord 上傳限制
+        if (fileSizeInMB > 8) { // Discord upload limit is 8MB
             logger.warn(`File too large (${fileSizeInMB.toFixed(2)} MB), deleting: ${mp3Path}`);
             await fs.unlink(mp3Path);
             return interaction.editReply(`File too large (${fileSizeInMB.toFixed(2)} MB), exceeds Discord upload limit.`);
         }
 
-        // 創建嵌入消息
+        // Create embed message
         const embed = new EmbedBuilder()
-            .setColor('#FF0000') // YouTube 紅色
+            .setColor('#FF0000') // YouTube red
             .setTitle(info.videoDetails.title)
             .setURL(info.videoDetails.video_url)
             .setDescription(`**Author**: ${info.videoDetails.author.name}\n**Duration**: ${formatDuration(info.videoDetails.lengthSeconds)}`)
             .setThumbnail(info.videoDetails.thumbnails[0].url)
             .setFooter({ text: 'Thank you for using our music bot!' });
 
-        // 下載完成，發送嵌入消息並上傳文件
+        // Send embed message and upload file
         await interaction.editReply({
             embeds: [embed],
             files: [mp3Path],
@@ -102,7 +102,7 @@ async function downloadAndUploadVideo(interaction) {
 
         logger.info(`Successfully uploaded MP3 for video: ${info.videoDetails.title}`);
 
-        // 清理下載的文件
+        // Clean up downloaded file
         await fs.unlink(mp3Path);
         logger.info(`Deleted temporary file: ${mp3Path}`);
     } catch (error) {
@@ -112,9 +112,9 @@ async function downloadAndUploadVideo(interaction) {
 }
 
 /**
- * 幫助函數：格式化時長
- * @param {number} seconds - 時間（秒）
- * @returns {string} - 格式化的時間
+ * Helper function: Format duration
+ * @param {number} seconds - Time in seconds
+ * @returns {string} - Formatted duration
  */
 function formatDuration(seconds) {
     const minutes = Math.floor(seconds / 60);
@@ -122,7 +122,7 @@ function formatDuration(seconds) {
     return `${minutes} min ${secs} sec`;
 }
 
-// 初始化 Slash Command
+// Define Slash Command
 export const data = new SlashCommandBuilder()
     .setName('download_video')
     .setDescription('Download MP3 audio from a YouTube video')
@@ -131,8 +131,8 @@ export const data = new SlashCommandBuilder()
             .setDescription('URL of the YouTube video')
             .setRequired(true));
 
-// Slash Command 的執行函數
+// Execute Slash Command
 export async function execute(interaction) {
-    await initializeDownloadPath(); // 確保下載目錄存在
+    await initializeDownloadPath(); // Ensure download directory exists
     await downloadAndUploadVideo(interaction);
 }

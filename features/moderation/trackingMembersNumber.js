@@ -2,48 +2,41 @@ import axios from 'axios';
 import https from 'https';
 import Logger from '../../features/errorhandle/errorhandle.js';
 
+/**
+ * @class MemberTracker
+ * @description Tracks member count and updates a specified channel name accordingly.
+ */
 class MemberTracker {
   /**
-   * 构造函数
-   * @param {Object} client - Discord.js 客户端实例
-   * @param {string} apiEndpoint - API 端点 URL
+   * @constructor
+   * @param {Object} client - Discord.js client instance.
+   * @param {string} apiEndpoint - API endpoint URL.
    */
   constructor(client, apiEndpoint) {
     this.client = client;
     this.apiEndpoint = apiEndpoint;
     this.channelCache = new Map();
     this.logger = new Logger();
-    this.updateQueue = new Set(); // 防止重复更新
+    this.updateQueue = new Set();
     this.init();
   }
 
   /**
-   * 初始化 MemberTracker
-   * 注册事件监听器并更新所有频道
+   * Initializes MemberTracker.
+   * Registers event listeners for member updates.
    */
-  async init() {
-    try {
-      this.logger.info('Initializing MemberTracker...');
+  init() {
+    this.logger.info('Initializing MemberTracker...');
+    
+    this.client.on('guildMemberAdd', (member) => this.safeUpdateChannelName(member.guild.id));
+    this.client.on('guildMemberRemove', (member) => this.safeUpdateChannelName(member.guild.id));
 
-      // 注册事件监听器
-      this.client.on('guildMemberAdd', (member) => {
-        this.safeUpdateChannelName(member.guild.id);
-      });
-
-      this.client.on('guildMemberRemove', (member) => {
-        this.safeUpdateChannelName(member.guild.id);
-      });
-
-      this.logger.info('MemberTracker initialized successfully.');
-    } catch (error) {
-      this.logger.error(`Error during MemberTracker initialization: ${error.message}\n${error.stack}`);
-    }
+    this.logger.info('MemberTracker initialized successfully.');
   }
 
   /**
-   * 安全更新频道名称
-   * 避免短时间内重复更新
-   * @param {string} guildId - 服务器 ID
+   * Ensures channel name updates are not duplicated within a short period.
+   * @param {string} guildId - Guild ID.
    */
   safeUpdateChannelName(guildId) {
     if (this.updateQueue.has(guildId)) {
@@ -54,7 +47,7 @@ class MemberTracker {
     this.updateQueue.add(guildId);
     this.updateChannelName(guildId)
       .catch((error) => {
-        this.logger.error(`Error during safe channel update for guild ${guildId}: ${error.message}`);
+        this.logger.error(`Error updating channel for guild ${guildId}: ${error.message}`);
       })
       .finally(() => {
         this.updateQueue.delete(guildId);
@@ -62,8 +55,8 @@ class MemberTracker {
   }
 
   /**
-   * 更新指定服务器的频道名称
-   * @param {string} guildId - 服务器 ID
+   * Updates the target voice channel name with the current member count.
+   * @param {string} guildId - Guild ID.
    */
   async updateChannelName(guildId) {
     try {
@@ -71,15 +64,9 @@ class MemberTracker {
       const guild = this.client.guilds.cache.get(guildId);
       if (!guild) throw new Error(`Guild not found: ${guildId}`);
 
-      // 获取 bot 的成员对象
-      const guildMe = guild.me || (await guild.members.fetch(this.client.user.id));
-      if (!guildMe) {
-        throw new Error(`Failed to fetch bot's member object in guild: ${guildId}`);
-      }
-
-      // 检查权限
-      if (!guildMe.permissions.has('MANAGE_CHANNELS')) {
-        throw new Error('Missing permission: MANAGE_CHANNELS');
+      const guildMe = guild.members.me || (await guild.members.fetch(this.client.user.id));
+      if (!guildMe?.permissions.has('ManageChannels')) {
+        throw new Error('Missing permission: ManageChannels');
       }
 
       const channelId = await this.getChannelId(guildId);
@@ -87,21 +74,20 @@ class MemberTracker {
 
       const channel = guild.channels.cache.get(channelId);
       if (!channel || channel.type !== 2) {
-        throw new Error('Voice channel not found or invalid type');
+        throw new Error('Invalid or missing voice channel');
       }
 
-      const memberCount = guild.memberCount;
-      await channel.edit({ name: `伺服器人數: ${memberCount}`, userLimit: 0 });
-      this.logger.info(`Successfully updated channel name for guild ${guildId} to: 伺服器人數: ${memberCount}`);
+      await channel.edit({ name: `Members: ${guild.memberCount}` });
+      this.logger.info(`Updated channel name for guild ${guildId} to: Members: ${guild.memberCount}`);
     } catch (error) {
-      this.logger.error(`Failed to update channel name for guild ${guildId}: ${error.message}\n${error.stack}`);
+      this.logger.error(`Failed to update channel for guild ${guildId}: ${error.message}`);
     }
   }
 
   /**
-   * 获取指定服务器的目标频道 ID
-   * @param {string} guildId - 服务器 ID
-   * @returns {Promise<string|null>} 频道 ID 或 null
+   * Retrieves the tracking channel ID from the API.
+   * @param {string} guildId - Guild ID.
+   * @returns {Promise<string|null>} Channel ID or null.
    */
   async getChannelId(guildId) {
     if (this.channelCache.has(guildId)) {
@@ -113,7 +99,6 @@ class MemberTracker {
         httpsAgent: new https.Agent({ rejectUnauthorized: false }),
       });
   
-      // 修正字段名为 trackingmembers_channel_id
       const channelId = response.data?.config?.trackingmembers_channel_id || null;
       this.channelCache.set(guildId, channelId);
   
@@ -125,14 +110,13 @@ class MemberTracker {
   
       return channelId;
     } catch (error) {
-      this.logger.error(`Error fetching channel ID for guild ${guildId}: ${error.message}\nResponse Data: ${JSON.stringify(error.response?.data)}`);
+      this.logger.error(`Error fetching channel ID for guild ${guildId}: ${error.message}`);
       return null;
     }
   }
 
   /**
-   * 销毁 MemberTracker
-   * 移除事件监听器
+   * Destroys the tracker by removing event listeners.
    */
   destroy() {
     this.client.off('guildMemberAdd', this.safeUpdateChannelName);

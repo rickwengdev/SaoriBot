@@ -1,32 +1,32 @@
 import { SlashCommandBuilder } from 'discord.js';
 import Logger from '../../features/errorhandle/errorhandle.js';
 
-// 初始化 Logger
+// Initialize Logger instance
 const logger = new Logger();
 
-// 定義指令名稱及描述
+// Define the command name and description
 export const data = new SlashCommandBuilder()
     .setName('bot_test')
-    .setDescription('Test the robot running status');
+    .setDescription('Test the bot running status');
 
 export async function execute(interaction) {
     const userTag = interaction.user.tag;
-    const guildId = interaction.guild?.id || 'DM'; // 若為 DM，guildId 預設為 'DM'
+    const guildId = interaction.guild?.id || 'DM'; // Default to 'DM' if used in direct messages
 
     try {
-        // Log 指令觸發的資訊
+        // Log command trigger information
         logger.info(`Command /bot_test triggered by ${userTag} in guild ${guildId}`);
 
-        // 回覆用戶確認機器人正在運行
-        await interaction.reply('The robot is running');
+        // Reply to the user to confirm the bot is running
+        await interaction.reply('The bot is running');
 
-        // Log 回覆成功
+        // Log successful reply
         logger.info(`Successfully replied to /bot_test command in guild ${guildId}`);
     } catch (error) {
-        // Log 錯誤信息
+        // Log error information
         logger.error(`Error in /bot_test command in guild ${guildId}: ${error.message}`);
 
-        // 回覆錯誤信息給用戶
+        // Reply with an error message
         await interaction.reply('❌ An error occurred while processing the command.');
     }
 }

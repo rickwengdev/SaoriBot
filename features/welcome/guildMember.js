@@ -1,32 +1,29 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { EmbedBuilder, AttachmentBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import axios from 'axios';
 import https from 'https';
-import Logger from '../../features/errorhandle/errorhandle.js'; // 假設 Logger 類位於此處
+import Logger from '../../features/errorhandle/errorhandle.js'; // Assume Logger is located here
 
 /**
  * @class GuildMembers
- * @description 處理成員加入和離開事件，並發送歡迎或離開消息。
+ * @description Handles member join and leave events, sending welcome or leave messages.
  */
 class GuildMembers {
     /**
      * @constructor
-     * @param {import('discord.js').Client} client - Discord 客戶端實例。
-     * @param {string} apiEndpoint - 獲取歡迎和離開頻道配置的 API 端點。
+     * @param {import('discord.js').Client} client - Discord client instance.
+     * @param {string} apiEndpoint - API endpoint to fetch welcome and leave channel configurations.
      */
     constructor(client, apiEndpoint) {
         this.client = client;
         this.apiEndpoint = apiEndpoint;
         this.logger = new Logger();
 
-        // 註冊事件處理
+        // Register event handlers
         this.registerEvents();
     }
 
     /**
-     * 註冊事件監聽器。
+     * Registers event listeners.
      */
     registerEvents() {
         this.client.on('guildMemberAdd', async (member) => {
@@ -49,7 +46,7 @@ class GuildMembers {
     }
 
     /**
-     * 從 API 獲取頻道配置。
+     * Fetches guild configuration from the API.
      */
     async fetchGuildConfig(guildId) {
         try {
@@ -60,13 +57,12 @@ class GuildMembers {
             return response.data.config || null;
         } catch (error) {
             this.logger.error(`Error fetching guild configuration for guild ${guildId}:`, error);
-            console.error(error);
             return null;
         }
     }
 
     /**
-     * 處理成員加入事件。
+     * Handles member join events.
      */
     async handleGuildMemberAdd(member) {
         const guildConfig = await this.fetchGuildConfig(member.guild.id);
@@ -81,41 +77,18 @@ class GuildMembers {
             return;
         }
     
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = path.dirname(__filename);
-        const welcomeBannerPath = path.join(__dirname, 'welcome-banner.png');
-    
-        let bannerBuffer = null;
-        try {
-            bannerBuffer = await fs.promises.readFile(welcomeBannerPath);
-            this.logger.info('Welcome banner successfully read.');
-        } catch (error) {
-            this.logger.warn('Unable to read welcome banner file, proceeding without banner:', error.message);
-        }
-    
-        // 嵌入訊息的設置
         const embed = new EmbedBuilder()
-            .setColor('#FFC0CB') // pink
-            .setTitle(`⭐ 歡迎 ${member.user.tag} ！ ⭐`)
+            .setColor('#FFC0CB') // Pink
+            .setTitle(`⭐ Welcome ${member.user.tag}! ⭐`)
             .setDescription(
-                `✨ 我是Rick❤，歡迎您的到來！✨\n\n` +
-                `這裡就是一個充滿01的地方，也是一個demo的地方！\n\n` +
-                `🌟 希望您能在這裡得到想要的東西！🌟`
+                `✨ I am Rick❤, welcome to the server! ✨\n\n` +
+                `This is a place full of possibilities and learning opportunities!\n\n` +
+                `🌟 We hope you find what you're looking for here! 🌟`
             )
-            .setThumbnail(member.user.displayAvatarURL({ dynamic: true, format: 'png', size: 256 }))
-            .setImage('attachment://welcome-banner.png') // 設置大圖
-    
-        // 訊息選項
-        const messageOptions = { 
-            embeds: [embed],
-        };
-        if (bannerBuffer) {
-            messageOptions.files = [new AttachmentBuilder(bannerBuffer, { name: 'welcome-banner.png' })];
-        }
+            .setThumbnail(member.user.displayAvatarURL({ dynamic: true, format: 'png', size: 256 }));
     
         try {
-            // 發送歡迎訊息
-            await welcomeChannel.send(messageOptions);
+            await welcomeChannel.send({ embeds: [embed] });
             this.logger.info(`Welcome message sent for member ${member.user.tag} in guild ${member.guild.id}`);
         } catch (error) {
             this.logger.error(`Error sending welcome message for member ${member.user.tag} in guild ${member.guild.id}:`, error);
@@ -123,7 +96,7 @@ class GuildMembers {
     }
 
     /**
-     * 處理成員離開事件。
+     * Handles member leave events.
      */
     async handleGuildMemberRemove(member) {
         const guildConfig = await this.fetchGuildConfig(member.guild.id);

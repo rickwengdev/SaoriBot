@@ -12,7 +12,7 @@ import trackingMembersNumber from './features/moderation/trackingMembersNumber.j
 
 dotenv.config();
 
-// 初始化 Logger
+// Initialize Logger
 const logger = new Logger();
 
 const client = new Client({
@@ -79,36 +79,36 @@ client.on(Events.InteractionCreate, async interaction => {
 });
 
 client.once(Events.ClientReady, c => {
-    logger.info(`✅Ready! Signed in as ${c.user.tag}`);
+    logger.info(`✅ Ready! Signed in as ${c.user.tag}`);
 
-    // 設置機器人狀態
+    // Set bot presence
     client.user.setPresence({ activities: [{ name: 'DISCORD.JS' }], status: 'dnd' });
 
-    // 調用 setup() 函數以設定所有功能
+    // Call setup() to initialize all features
     setup();
 });
 
 export function setup() {
-    // 設置訊息反應事件
+    // Setup reaction event handling
     new MessageReactionHandler(client, process.env.apiEndpoint);
 
-    // 設置用戶加入伺服器事件
+    // Setup user join event handling
     new GuildMembers(client, process.env.apiEndpoint);
 
-    // 設置自動語音頻道功能
+    // Setup dynamic voice channel management
     new DynamicVoiceChannelManager(client, process.env.apiEndpoint);
 
-    // 設置伺服器人數追蹤功能
+    // Setup server member tracking
     new trackingMembersNumber(client, process.env.apiEndpoint);
 
-    // 設置日誌功能
+    // Setup logging management
     new LoggingManager(client, process.env.apiEndpoint);
 
-    // 日誌記錄功能啟動
+    // Log setup completion
     logger.info('Logger setup completed.');
 }
 
-// 捕獲未處理的異常和拒絕的 Promise
+// Capture unhandled exceptions and rejected promises
 process.on('uncaughtException', (error) => {
     logger.error('Uncaught Exception:', error);
 });
@@ -117,9 +117,9 @@ process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-process.setMaxListeners(20); // 根据需要调整最大值
+process.setMaxListeners(20); // Adjust as needed
 
-// 登錄到 Discord
+// Login to Discord
 client.login(process.env.token).catch(error => {
     logger.error('Failed to login:', error);
 });
