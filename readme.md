@@ -33,6 +33,7 @@ Create a `.env` file in the project root directory and add the following content
 ```bash
 token=your_discord_bot_token
 client_id=your_client_id
+apiEndpoint=https://backend_container:3000
 ```
 
 Replace the values with your actual bot token and relevant IDs.
