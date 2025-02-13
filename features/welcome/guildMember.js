@@ -1,4 +1,7 @@
-import { EmbedBuilder } from 'discord.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { EmbedBuilder, AttachmentBuilder } from 'discord.js';
 import axios from 'axios';
 import https from 'https';
 import Logger from '../../features/errorhandle/errorhandle.js'; // Assume Logger is located here
@@ -77,6 +80,18 @@ class GuildMembers {
             return;
         }
     
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = path.dirname(__filename);
+        const welcomeBannerPath = path.join(__dirname, 'welcome-banner.png');
+    
+        let bannerBuffer = null;
+        try {
+            bannerBuffer = await fs.promises.readFile(welcomeBannerPath);
+            this.logger.info('Welcome banner successfully read.');
+        } catch (error) {
+            this.logger.warn('Unable to read welcome banner file, proceeding without banner:', error.message);
+        }
+
         const embed = new EmbedBuilder()
             .setColor('#FFC0CB') // Pink
             .setTitle(`⭐ Welcome ${member.user.tag}! ⭐`)
@@ -85,10 +100,19 @@ class GuildMembers {
                 `This is a place full of possibilities and learning opportunities!\n\n` +
                 `🌟 We hope you find what you're looking for here! 🌟`
             )
-            .setThumbnail(member.user.displayAvatarURL({ dynamic: true, format: 'png', size: 256 }));
+            .setThumbnail(member.user.displayAvatarURL({ dynamic: true, format: 'png', size: 256 }))
+            .setImage('attachment://welcome-banner.png');
+
+        const messageOptions = { 
+            embeds: [embed],
+        };
+
+        if (bannerBuffer) {
+            messageOptions.files = [new AttachmentBuilder(bannerBuffer, { name: 'welcome-banner.png' })];
+        }
     
         try {
-            await welcomeChannel.send({ embeds: [embed] });
+            await welcomeChannel.send(messageOptions);
             this.logger.info(`Welcome message sent for member ${member.user.tag} in guild ${member.guild.id}`);
         } catch (error) {
             this.logger.error(`Error sending welcome message for member ${member.user.tag} in guild ${member.guild.id}:`, error);
