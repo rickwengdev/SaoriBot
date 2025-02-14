@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import MusicPlayer from '../../features/music/musicPlayer.js';
 import axios from 'axios';
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 import ytdl from '@distube/ytdl-core';
 import Logger from '../../features/errorhandle/errorhandle.js';
 

@@ -4,54 +4,59 @@ import Logger from '../../features/errorhandle/errorhandle.js';
 
 /**
  * @class MemberTracker
- * @description Tracks member count and updates a specified channel name accordingly.
+ * @description Tracks member count and updates a specified channel name at scheduled intervals.
  */
 class MemberTracker {
   /**
    * @constructor
    * @param {Object} client - Discord.js client instance.
    * @param {string} apiEndpoint - API endpoint URL.
+   * @param {number} interval - Update interval in milliseconds.
    */
-  constructor(client, apiEndpoint) {
+  constructor(client, apiEndpoint, interval = 60000) {
     this.client = client;
     this.apiEndpoint = apiEndpoint;
     this.channelCache = new Map();
     this.logger = new Logger();
-    this.updateQueue = new Set();
+    this.interval = interval;
+    this.trackerInterval = null;
     this.init();
   }
 
   /**
-   * Initializes MemberTracker.
-   * Registers event listeners for member updates.
+   * Initializes MemberTracker and starts the scheduled updates.
    */
   init() {
-    this.logger.info('Initializing MemberTracker...');
-    
-    this.client.on('guildMemberAdd', (member) => this.safeUpdateChannelName(member.guild.id));
-    this.client.on('guildMemberRemove', (member) => this.safeUpdateChannelName(member.guild.id));
-
-    this.logger.info('MemberTracker initialized successfully.');
+    this.logger.info('Initializing MemberTracker with scheduled updates...');
+    this.startTracking();
   }
 
   /**
-   * Ensures channel name updates are not duplicated within a short period.
-   * @param {string} guildId - Guild ID.
+   * Starts the scheduled member count updates.
    */
-  safeUpdateChannelName(guildId) {
-    if (this.updateQueue.has(guildId)) {
-      this.logger.info(`Update already in progress for guild ${guildId}. Skipping...`);
-      return;
+  startTracking() {
+    if (this.trackerInterval) {
+      clearInterval(this.trackerInterval);
     }
-
-    this.updateQueue.add(guildId);
-    this.updateChannelName(guildId)
-      .catch((error) => {
-        this.logger.error(`Error updating channel for guild ${guildId}: ${error.message}`);
-      })
-      .finally(() => {
-        this.updateQueue.delete(guildId);
+    
+    this.trackerInterval = setInterval(() => {
+      this.client.guilds.cache.forEach(guild => {
+        this.updateChannelName(guild.id);
       });
+    }, this.interval);
+
+    this.logger.info(`Member tracking started, updating every ${this.interval / 1000} seconds.`);
+  }
+
+  /**
+   * Stops the scheduled updates.
+   */
+  stopTracking() {
+    if (this.trackerInterval) {
+      clearInterval(this.trackerInterval);
+      this.trackerInterval = null;
+      this.logger.info('Member tracking stopped.');
+    }
   }
 
   /**
@@ -116,11 +121,10 @@ class MemberTracker {
   }
 
   /**
-   * Destroys the tracker by removing event listeners.
+   * Destroys the tracker by stopping updates.
    */
   destroy() {
-    this.client.off('guildMemberAdd', this.safeUpdateChannelName);
-    this.client.off('guildMemberRemove', this.safeUpdateChannelName);
+    this.stopTracking();
     this.logger.info('MemberTracker destroyed.');
   }
 }

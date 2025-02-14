@@ -37,18 +37,18 @@ for (const folder of commandFolders) {
 }
 
 // Create REST instance and set token
-const rest = new REST({ version: '10' }).setToken(process.env.token);
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 // Deploy application (/) commands
 (async () => {
     try {
-        console.log(`Registering application commands using token: ${process.env.token}`);
+        console.log(`Registering application commands using token: ${process.env.TOKEN}`);
 
         console.log(`🔄 Starting to refresh ${commands.length} application (/) commands.`);
 
         // Use put method to completely refresh all commands on the server
         const data = await rest.put(
-            Routes.applicationCommands(process.env.clientId),
+            Routes.applicationCommands(process.env.CLIENT_ID),
             { body: commands },
         );
 
