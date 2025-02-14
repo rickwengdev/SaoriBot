@@ -117,6 +117,9 @@ process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
+// Increase the maximum number of listeners for the process
+process.setMaxListeners(20);
+
 // Login to Discord
 client.login(process.env.TOKEN).catch(error => {
     logger.error('Failed to login:', error);
