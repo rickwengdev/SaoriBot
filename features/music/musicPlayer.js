@@ -148,6 +148,20 @@ class MusicPlayer {
             this.logger.info(`Music playback stopped for guild: ${this.guildId}`);
         }
     }
+    /**
+     * Stop playback and clear the playlist.
+     */
+    stop(interaction) {
+        const connection = getVoiceConnection(interaction.guild.id);
+        if (connection) {
+            connection.destroy();
+            this.logger.info(`Playback stopped and connection destroyed for guild: ${this.guildId}`);
+        }
+        this.removeCurrentSong();
+        this.songUrl = null;
+        this.player.stop(true);
+        this.logger.info(`Playlist cleared for guild: ${this.guildId}`);
+    }
 }
 
 export default MusicPlayer;

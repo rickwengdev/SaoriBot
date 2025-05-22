@@ -122,5 +122,5 @@ process.setMaxListeners(20);
 
 // Login to Discord
 client.login(process.env.TOKEN).catch(error => {
-    logger.error('Failed to login:', error);
+    console.error('Failed to login:', error);
 });
