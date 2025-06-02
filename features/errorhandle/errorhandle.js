@@ -115,7 +115,8 @@ Stack Trace: ${error.stack}
    */
   error(error) {
     if (error instanceof Error) {
-      this.logger.error(error.message, { stack: error.stack });
+      const stack = error.stack ? `\n${error.stack}` : '';
+      this.logger.error(`${error.message}${stack}`);
     } else {
       this.logger.error(error);
     }

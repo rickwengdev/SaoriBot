@@ -9,6 +9,7 @@ import LoggingManager from './features/moderation/logservermessage.js';
 import GuildMembers from './features/welcome/guildMember.js';
 import Logger from './features/errorhandle/errorhandle.js';
 import trackingMembersNumber from './features/moderation/trackingMembersNumber.js';
+import * as messageEventHandler from './features/eventhandle/messageCreate.js';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ const client = new Client({
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.DirectMessages
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
@@ -77,6 +79,8 @@ client.on(Events.InteractionCreate, async interaction => {
         await interaction.reply({ content: 'An error occurred while executing this command!', ephemeral: true });
     }
 });
+
+client.on(messageEventHandler.name, messageEventHandler.execute);
 
 client.once(Events.ClientReady, c => {
     logger.info(`✅ Ready! Signed in as ${c.user.tag}`);
