@@ -72,6 +72,8 @@ async function addToPlaylist(interaction) {
 
         // Retrieve video details
         const videoDetails = await getVideoInfo(songUrl);
+        const rawDescription = videoDetails?.description;
+        const saveDescription = typeof rawDescription === 'string' ? rawDescription.slice(0, 200) + '...' : 'No description available.';
 
         // Construct an embed message
         const embed = new EmbedBuilder()
@@ -79,7 +81,7 @@ async function addToPlaylist(interaction) {
             .setTitle(videoDetails.title)
             .setURL(songUrl)
             .setThumbnail(videoDetails.thumbnails[0]?.url || '') // Handle empty thumbnails
-            .setDescription(videoDetails.description.slice(0, 200) + '...'); // Limit description length
+            .setDescription(saveDescription); // Limit description length
 
         logger.info(`Successfully created embed for video: ${videoDetails.title}`);
 

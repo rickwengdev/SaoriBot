@@ -59,6 +59,18 @@ class MusicPlayer {
     }
 
     /**
+     * Remove a specific song from the playlist.
+     * @param {string} songUrl - The URL of the song to remove.
+     */
+    removeSong(songUrl) {
+        const playlist = playlists.get(this.guildId) || [];
+        const updatedPlaylist = playlist.filter(url => url !== songUrl);
+        playlists.set(this.guildId, updatedPlaylist);
+        savePlaylists();
+        this.logger.info(`Song removed from playlist for guild: ${this.guildId}, URL: ${songUrl}`);
+    }
+    
+    /**
      * Remove the currently playing song.
      */
     removeCurrentSong() {
