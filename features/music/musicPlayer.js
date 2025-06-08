@@ -103,10 +103,13 @@ class MusicPlayer {
 
         try {
             const videoInfo = await ytdl.getBasicInfo(this.songUrl);
+            const rawDescription = videoInfo?.videoDetails?.description;
+            const saveDescription = typeof rawDescription === 'string' ? rawDescription.slice(0, 200) + '...' : 'No description available.';
+
             const embed = new EmbedBuilder()
                 .setTitle(videoInfo.videoDetails.title)
                 .setThumbnail(videoInfo.videoDetails.thumbnails[0]?.url || '')
-                .setDescription(videoInfo.videoDetails.description.slice(0, 200) + '...')
+                .setDescription(saveDescription)
                 .setColor('#FF0000');
 
             await interaction.editReply({ content: '🎵 Now playing:', embeds: [embed] });
