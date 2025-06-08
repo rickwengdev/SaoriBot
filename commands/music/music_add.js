@@ -15,11 +15,11 @@ const logger = new Logger();
  */
 async function isValidYoutubeUrl(url) {
     try {
-        const response = await axios.get(url);
-        const $ = cheerio.load(response.data);
-        const isValid = $('title').text() !== 'YouTube';
-        logger.info(`URL validation for "${url}": ${isValid ? 'Valid' : 'Invalid'}`);
-        return isValid;
+        const info = await ytdl.getBasicInfo(url);
+        const isPlayable = info?.videoDetails?.isPlayable;
+
+        logger.info(`URL validation for "${url}": ${isPlayable ? 'Playable' : 'Unplayable/Restricted'}`);
+        return isPlayable;
     } catch (error) {
         logger.error(`Error validating YouTube URL: ${url}`, error);
         return false;
