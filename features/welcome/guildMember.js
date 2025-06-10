@@ -96,7 +96,7 @@ class GuildMembers {
             .setColor('#FFC0CB') // Pink
             .setTitle(`⭐ Welcome ${member.user.tag}! ⭐`)
             .setDescription(
-                `✨ I am Rick❤, welcome to the server! ✨\n\n` +
+                `✨ welcome to ${member.guild.name} ✨\n\n` +
                 `This is a place full of possibilities and learning opportunities!\n\n` +
                 `🌟 We hope you find what you're looking for here! 🌟`
             )
