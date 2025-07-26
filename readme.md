@@ -31,9 +31,12 @@ npm install
 Create a `.env` file in the project root directory and add the following content:
 
 ```bash
-token=your_discord_bot_token
-client_id=your_client_id
+TOKEN=your_discord_bot_token
+CLIENT_ID=your_client_id
 apiEndpoint=https://backend_container:3000
+GEMINI_API_KEY=
+GOOGLE_CSE_API_KEY=
+GOOGLE_CSE_CX=
 ```
 
 Replace the values with your actual bot token and relevant IDs.
